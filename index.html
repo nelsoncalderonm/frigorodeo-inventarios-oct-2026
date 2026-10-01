@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Inventario Frigorodeo</title>
 <style>
 :root{--bg:#f6f4f1;--card:#fff;--ink:#1d1b19;--mut:#7a746d;--line:#e4dfd9;--red:#b3261e;--ok:#1f7a3d;--okbg:#e6f4ea}
@@ -109,13 +109,48 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
 .tr .k{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}.tr .c{color:var(--mut)}
 .sumtot{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding:12px 2px 0}
 .acts{display:flex;gap:8px;margin-top:14px}.acts button{flex:1}
+
+/* ---- UX pass: accesibilidad, toque, movimiento ---- */
+:root{--mut:#6a645d}
+@media (prefers-color-scheme:dark){:root{--mut:#a9a299}}
+button,.opt,.nv,.npt,.irow,.pcard,.ih{touch-action:manipulation}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px;border-radius:8px}
+input:focus-visible,select:focus-visible{outline-offset:0}
+button{min-height:44px}
+.cnt button{width:44px;height:44px}
+.he button,.he .bt button{min-height:44px;min-width:44px;padding:8px 14px}
+.picked button,#nall,#nnone{min-height:44px;padding:8px 14px!important;font-size:14px!important}
+.tools button{min-height:44px}
+#burger{min-width:44px;min-height:44px}
+.nv{min-height:48px}
+.pvrow input{font-size:16px;min-height:44px}
+.pvrow label{min-height:44px}
+#side select,#afec{font-size:16px;min-height:44px}
+.pvn,.sesinfo,.irow .v small,.hint,small{font-size:12px}
+.opt,.npt{min-height:48px;align-items:center}
+.pcard{min-height:56px}
+.tr{font-size:14px}
+.toast{min-height:20px;height:auto}
+.warn{color:var(--red);font-weight:600;font-size:14px;display:none;margin-top:6px}
+.warn.on{display:block}
+.warn::before{content:"⚠ "}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dd{overscroll-behavior:contain}
+#step2>label.l:first-child,#stepi>label.l:first-child{margin-top:14px}
+.calc:has(#cn.neg) .net span:first-child{color:var(--red)}
+.modal{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+main{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+header{padding-top:calc(12px + env(safe-area-inset-top))}
+#side{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+@media(max-width:899px){#side:not(.open){visibility:hidden;transition:transform .2s,visibility 0s .2s}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <div class="scrim" id="scrim"></div>
 <aside id="side">
   <div class="brand">Frigorodeo<small>Inventario físico · oct 2026</small></div>
-  <label class="l" style="margin:12px 0 4px">Inventario actual</label>
+  <label class="l" for="sesel" style="margin:12px 0 4px">Inventario actual</label>
   <select id="sesel"></select>
   <div class="sesinfo" id="sesinfo"></div>
   <button class="pri btn" id="newinv">+ Nuevo inventario</button>
@@ -129,35 +164,36 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
   <div class="sfoot">Modo local · los datos se guardan en este dispositivo.<br>Sin inicio de sesión todavía.</div>
 </aside>
 <header>
-  <div class="top"><div class="lft"><button id="burger" aria-label="Menú">☰</button><div><h1 id="ttl">Inventario cárnico</h1><div class="pvn" id="pvn"></div></div></div><div class="total" id="grand">0,00 kg</div></div>
+  <div class="top"><div class="lft"><button id="burger" aria-label="Abrir menú" aria-controls="side" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div><h1 id="ttl">Inventario cárnico</h1><div class="pvn" id="pvn"></div></div></div><div class="total" id="grand">0,00 kg</div></div>
   <div class="tools" id="toolsC"><button id="sum">Resumen</button><button id="exp">CSV</button><button id="rst">Borrar todo</button></div>
 </header>
 <main id="viewC">
   <div class="cbanner">Inventario cerrado · solo lectura. Reábrelo desde el menú para modificarlo.</div>
   <div class="card">
-    <div class="edbar" id="edbar">✏️ Editando un pesaje</div>
-    <label class="l">1. Código o nombre del producto</label>
+    <div class="edbar" id="edbar" role="status"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Editando un pesaje</div>
+    <label class="l" for="q">1. Código o nombre del producto</label>
     <div class="cb" id="cb">
-      <input type="text" id="q" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search">
-      <div class="dd" id="dd"></div>
+      <input type="text" id="q" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search" role="combobox" aria-expanded="false" aria-controls="dd" aria-autocomplete="list">
+      <div class="dd" id="dd" role="listbox" aria-label="Productos"></div>
     </div>
     <div class="picked" id="picked"><div><b id="pn"></b><small id="pc"></small></div><button id="chg">Cambiar</button></div>
 
     <div id="step2" style="display:none">
-      <label class="l">2. Peso en la balanza (kg)</label>
+      <label class="l" for="peso">2. Peso en la balanza (kg)</label>
       <input type="number" id="peso" class="bigin" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
-      <label class="l">3. ¿Qué canastillas / base tenía?</label>
-      <div class="tipos" id="tipos"></div>
+      <div class="l" id="lt" style="margin:14px 0 6px;font-size:13px;color:var(--mut)">3. ¿Qué canastillas / base tenía?</div>
+      <div class="tipos" id="tipos" role="group" aria-labelledby="lt"></div>
       <div class="hint" style="margin-top:6px">Sin canastilla: deja todo en 0.</div>
       <div class="calc">
         <div><span>Peso bruto</span><span id="cb2">0,00</span></div>
         <div><span>Tara</span><span id="ct">− 0,00</span></div>
         <div class="net"><span>Neto</span><span id="cn">0,00 kg</span></div>
       </div>
+      <div class="warn" id="warn" role="alert">La tara de las canastillas supera el peso. Revisa el peso o quita canastillas.</div>
       <button class="pri" id="add" disabled>Agregar al inventario</button>
       <button class="add2" id="canc" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
     </div>
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
   <h2><span>Productos en el inventario</span><span id="cntp"></span></h2>
@@ -167,21 +203,21 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
 <main id="viewI" style="display:none">
   <div class="cbanner">Inventario cerrado · solo lectura. Reábrelo desde el menú para modificarlo.</div>
   <div class="card">
-    <label class="l">1. Insumo</label>
-    <div class="cb" id="cbi"><input type="text" id="qi" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search"><div class="dd" id="ddi"></div></div>
+    <label class="l" for="qi">1. Insumo</label>
+    <div class="cb" id="cbi"><input type="text" id="qi" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search" role="combobox" aria-expanded="false" aria-controls="ddi" aria-autocomplete="list"><div class="dd" id="ddi" role="listbox" aria-label="Insumos"></div></div>
     <div class="picked" id="pickedi"><div><b id="pni"></b><small id="pci"></small></div><button id="chgi">Cambiar</button></div>
     <div id="stepi" style="display:none">
       <label class="l">2. Cantidad (unidades)</label>
       <div class="two">
-        <div><div class="hint" style="text-align:center">Nuevos</div><input type="number" id="nu" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
-        <div><div class="hint" style="text-align:center">En uso</div><input type="number" id="us" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+        <div><label class="hint" for="nu" style="display:block;text-align:center">Nuevos</label><input type="number" id="nu" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+        <div><label class="hint" for="us" style="display:block;text-align:center">En uso</label><input type="number" id="us" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
       </div>
       <div class="calc"><div class="net"><span>Total</span><span id="tt">0</span></div></div>
       <button class="pri" id="savei" disabled>Guardar insumo</button>
       <button class="add2" id="cancei" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
       <button class="add2" id="delei" style="display:none;margin-top:8px;width:100%;color:var(--red)">Borrar este insumo</button>
     </div>
-    <div class="toast" id="toasti"></div>
+    <div class="toast" id="toasti" role="status" aria-live="polite"></div>
   </div>
   <h2><span>Insumos registrados</span><span id="cnti"></span></h2>
   <div id="listi"></div>
@@ -189,10 +225,10 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
 </main>
 
 <main id="viewA" style="display:none">
-  <select id="afec"></select>
+  <select id="afec" aria-label="Fecha del inventario"></select>
   <div class="card" style="padding:0;overflow:hidden"><div id="pcards"></div></div>
   <h2><span>Total por corte · todos los puntos</span><span id="atot"></span></h2>
-  <input type="search" id="qa" placeholder="Buscar corte o código…">
+  <input type="search" id="qa" aria-label="Buscar corte o código" placeholder="Buscar corte o código…">
   <div class="tbl" id="tbla" style="max-height:none;overflow:visible"></div>
   <h2><span>Insumos · todos los puntos</span></h2>
   <div class="tbl" id="tblai" style="max-height:none;overflow:visible"></div>
@@ -204,8 +240,8 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
     <h3 style="margin:0 0 4px">Puntos de venta</h3>
     <div class="sub">Edita el nombre o la ciudad. Desactivar un punto lo oculta del selector pero conserva sus datos.</div>
     <div id="pvlist"></div>
-    <label class="l">Agregar punto de venta</label>
-    <div class="pvrow" style="border:0;padding:0"><input type="text" id="npn" placeholder="Nombre"><input type="text" id="npc" placeholder="Ciudad"><button class="pri" id="npa" style="padding:10px 14px">Agregar</button></div>
+    <label class="l" for="npn">Agregar punto de venta</label>
+    <div class="pvrow" style="border:0;padding:0"><input type="text" id="npn" placeholder="Nombre" aria-label="Nombre del punto"><input type="text" id="npc" placeholder="Ciudad" aria-label="Ciudad del punto"><button class="pri" id="npa" style="padding:10px 14px">Agregar</button></div>
   </div>
   <div class="card" style="margin-top:12px">
     <h3 style="margin:0 0 4px">Roles</h3>
@@ -216,27 +252,27 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
   </div>
 </main>
 
-<div class="overlay" id="ovnew" style="z-index:50"><div class="modal">
-  <h3>Nuevo inventario</h3>
+<div class="overlay" id="ovnew" style="z-index:50"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="hnew">
+  <h3 id="hnew">Nuevo inventario</h3>
   <div class="sub">Quién lo hace, qué día y en qué puntos. Se crea un inventario por cada punto marcado.</div>
-  <label class="l">Encargado del inventario</label>
+  <label class="l" for="nenc">Encargado del inventario</label>
   <input type="text" id="nenc" placeholder="Nombre y apellido" autocomplete="name">
-  <label class="l">Fecha del inventario</label>
+  <label class="l" for="nfec">Fecha del inventario</label>
   <input type="date" id="nfec">
   <label class="l" style="display:flex;justify-content:space-between"><span>Puntos de venta <b id="nsel"></b></span><span><button type="button" id="nall" style="padding:2px 10px;font-size:12px">Todos</button> <button type="button" id="nnone" style="padding:2px 10px;font-size:12px">Ninguno</button></span></label>
   <div class="tbl" id="npts" style="max-height:34vh"></div>
   <div class="acts"><button id="ncancel">Cancelar</button><button class="pri" id="ngo" disabled>Iniciar inventario</button></div>
 </div></div>
 
-<div class="overlay" id="ov"><div class="modal">
-  <h3>Resumen del punto de venta</h3>
+<div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="hsum">
+  <h3 id="hsum">Resumen del punto de venta</h3>
   <div class="sub">Kg netos por producto registrado.</div>
   <div class="tbl" id="tbl"></div>
   <div class="sumtot"><span>Total</span><span id="gt2"></span></div>
   <div class="acts"><button id="close2">Cerrar</button><button class="pri" id="cp">Copiar resumen</button></div>
 </div></div>
 
-<div class="overlay" id="ovc" style="z-index:40"><div class="modal" style="max-width:380px;border-radius:18px;margin:16px">
+<div class="overlay" id="ovc" style="z-index:40"><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="cm" aria-describedby="cs" style="max-width:380px;border-radius:18px;margin:16px">
   <h3 id="cm"></h3><div class="sub" id="cs"></div>
   <div class="acts"><button id="cno">Cancelar</button><button class="pri" id="cyes">Sí, borrar</button></div>
 </div></div>
@@ -296,11 +332,11 @@ function matches(){
 }
 function drawDD(){
   shown=matches(); hi=Math.min(hi,Math.max(0,shown.length-1));
-  $('dd').innerHTML=shown.length?shown.map((p,i)=>`<div class="opt ${i==hi?'sel':''}" data-i="${i}"><span class="c">${p.c}</span><span>${p.n}</span>${(data[p.r]||[]).length?`<span class="hv">${fmt(tot(p.r))} kg</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
-  $('dd').classList.add('open');
+  $('dd').innerHTML=shown.length?shown.map((p,i)=>`<div class="opt ${i==hi?'sel':''}" role="option" aria-selected="${i==hi}" data-i="${i}"><span class="c">${p.c}</span><span>${p.n}</span>${(data[p.r]||[]).length?`<span class="hv">${fmt(tot(p.r))} kg</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
+  $('dd').classList.add('open');$('q').setAttribute('aria-expanded','true');
   const s=$('dd').querySelector('.sel'); if(s)s.scrollIntoView({block:'nearest'});
 }
-const closeDD=()=>$('dd').classList.remove('open');
+const closeDD=()=>{$('dd').classList.remove('open');$('q').setAttribute('aria-expanded','false')};
 function pick(p,idx){
   if(!ses()||cerrado())return;
   cur=p; cnt={}; closeDD(); editing=null;
@@ -336,12 +372,12 @@ function recalc(){
   const b=parseFloat($('peso').value)||0,t=tara(),n=r2(b-t);
   $('cb2').textContent=fmt(b);$('ct').textContent='− '+fmt(t);
   $('cn').textContent=fmt(n)+' kg';$('cn').classList.toggle('neg',n<0);
-  $('add').disabled=!(cur&&b>0&&n>=0);
+  $('add').disabled=!(cur&&b>0&&n>=0);$('warn').classList.toggle('on',b>0&&n<0);
 }
 function drawTipos(){
   $('tipos').innerHTML=TIPOS.map(t=>`<div class="tipo ${cnt[t.id]?'act':''}">
     <div class="t"><b>${t.n}</b><small>${String(t.kg).replace('.',',')} kg c/u</small></div>
-    <div class="cnt"><button data-t="${t.id}" data-d="-1">−</button><span>${cnt[t.id]||0}</span><button data-t="${t.id}" data-d="1">+</button></div></div>`).join('');
+    <div class="cnt"><button data-t="${t.id}" data-d="-1" aria-label="Quitar una ${t.n.toLowerCase()}">−</button><span aria-live="polite" aria-label="${t.n}: ${cnt[t.id]||0}">${cnt[t.id]||0}</span><button data-t="${t.id}" data-d="1" aria-label="Agregar una ${t.n.toLowerCase()}">+</button></div></div>`).join('');
 }
 $('tipos').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;
   cnt[b.dataset.t]=Math.max(0,(cnt[b.dataset.t]||0)+ +b.dataset.d);drawTipos();recalc()};
@@ -426,9 +462,9 @@ let iCur=null,iEdit=false,ihi=0,ishown=[];
 function matchesI(){const q=norm($('qi').value.trim());if(!q)return INSUMOS.slice();
   const w=q.split(/\s+/);return INSUMOS.filter(p=>{const s=norm(p.n);return w.every(x=>s.includes(x))})}
 function drawDDI(){ishown=matchesI();ihi=Math.min(ihi,Math.max(0,ishown.length-1));
-  $('ddi').innerHTML=ishown.length?ishown.map((p,i)=>`<div class="opt ${i==ihi?'sel':''}" data-i="${i}"><span>${p.n}</span>${ins[p.id]?`<span class="hv">${fq(ins[p.id].n+ins[p.id].u)} und</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
-  $('ddi').classList.add('open');const s=$('ddi').querySelector('.sel');if(s)s.scrollIntoView({block:'nearest'})}
-const closeDDI=()=>$('ddi').classList.remove('open');
+  $('ddi').innerHTML=ishown.length?ishown.map((p,i)=>`<div class="opt ${i==ihi?'sel':''}" role="option" aria-selected="${i==ihi}" data-i="${i}"><span>${p.n}</span>${ins[p.id]?`<span class="hv">${fq(ins[p.id].n+ins[p.id].u)} und</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
+  $('ddi').classList.add('open');$('qi').setAttribute('aria-expanded','true');const s=$('ddi').querySelector('.sel');if(s)s.scrollIntoView({block:'nearest'})}
+const closeDDI=()=>{$('ddi').classList.remove('open');$('qi').setAttribute('aria-expanded','false')};
 function resetI(){iCur=null;iEdit=false;$('qi').value='';$('qi').style.display='';$('pickedi').classList.remove('on');$('stepi').style.display='none';$('cancei').style.display='none';$('delei').style.display='none';$('chgi').style.display='';$('savei').textContent='Guardar insumo';ihi=0}
 function pickI(p){if(!ses()||cerrado())return;iCur=p;closeDDI();const e=ins[p.id];iEdit=!!e;
   $('qi').style.display='none';$('pickedi').classList.add('on');$('pni').textContent=p.n;$('pci').textContent=e?'Ya registrado: se reemplazan los valores':'';
@@ -463,13 +499,13 @@ $('expi').onclick=()=>{const c=v=>'"'+String(v).replace(/"/g,'""').replace(/^(\d
 const VIEWS={c:'viewC',i:'viewI',a:'viewA',g:'viewG'};
 const TITLES={c:'Inventario cárnico',i:'Insumos',a:'Todos los puntos',g:'Configuración'};
 let view='c';
-function openSide(o){$('side').classList.toggle('open',o);$('scrim').classList.toggle('open',o)}
+function openSide(o){$('side').classList.toggle('open',o);$('scrim').classList.toggle('open',o);$('burger').setAttribute('aria-expanded',o?'true':'false');if(o)setTimeout(()=>($('sesel')||$('side')).focus(),30)}
 $('burger').onclick=()=>openSide(true);$('scrim').onclick=()=>openSide(false);
 function go(v){view=v;
   Object.entries(VIEWS).forEach(([k,id])=>$(id).style.display=k===v?'':'none');
   $('toolsC').style.display=v==='c'?'':'none';$('grand').style.display=v==='c'?'':'none';
   $('ttl').textContent=TITLES[v];
-  document.querySelectorAll('.nv').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.querySelectorAll('.nv').forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   if(v==='i')renderI();if(v==='a')renderA();if(v==='g')renderG();
   openSide(false);window.scrollTo(0,0)}
 document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>go(b.dataset.v));
@@ -580,6 +616,12 @@ $('npa').onclick=()=>{const n=$('npn').value.trim();if(!n)return;
   puntos.push({id:(crypto.randomUUID?crypto.randomUUID():'pv-'+Date.now()),nombre:n,ciudad:$('npc').value.trim(),activo:true});
   $('npn').value=$('npc').value='';wr(PK,puntos);renderG()};
 
+/* Escape cierra la capa superior */
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if($('ovc').classList.contains('open')){$('cno').click();return}
+  if($('ovnew').classList.contains('open')&&sesiones.length){$('ncancel').click();return}
+  if($('ov').classList.contains('open')){$('close2').click();return}
+  if($('side').classList.contains('open')){openSide(false);$('burger').focus()}});
 /* arranque */
 updateUI();
 if(!sesiones.length)openNew();else go('c');
