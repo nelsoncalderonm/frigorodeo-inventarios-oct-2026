@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Inventario Frigorodeo</title>
+<style>
+:root{--bg:#f6f4f1;--card:#fff;--ink:#1d1b19;--mut:#7a746d;--line:#e4dfd9;--red:#b3261e;--ok:#1f7a3d;--okbg:#e6f4ea}
+@media (prefers-color-scheme:dark){:root{--bg:#161412;--card:#221f1c;--ink:#f1ede8;--mut:#9a938b;--line:#37322d;--red:#e0574d;--ok:#6fcf8e;--okbg:#1c2e22}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px;border-bottom:1px solid var(--line)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;max-width:640px;margin:auto}
+h1{font-size:17px;margin:0}
+.total{font-weight:800;font-size:18px;color:var(--red);white-space:nowrap}
+.tools{display:flex;gap:8px;max-width:640px;margin:8px auto 0}
+.tools button{flex:1;padding:8px}
+input[type=search],input[type=number],input[type=text]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 14px}
+button.pri{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+button.pri:disabled{opacity:.4;cursor:default}
+main{padding:12px 16px 60px;max-width:640px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+label.l{display:block;font-size:13px;color:var(--mut);margin:14px 0 6px}
+label.l:first-child{margin-top:0}
+.cb{position:relative}
+.dd{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;max-height:46vh;overflow:auto;z-index:8;box-shadow:0 8px 24px rgba(0,0,0,.18);display:none}
+.dd.open{display:block}
+.opt{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+.opt:last-child{border:0}
+.opt.sel,.opt:hover{background:var(--okbg)}
+.opt .c{color:var(--mut);min-width:52px;font-variant-numeric:tabular-nums}
+.opt .hv{margin-left:auto;color:var(--ok);font-size:12px;white-space:nowrap}
+.picked{display:none;align-items:center;justify-content:space-between;gap:8px;background:var(--okbg);border:1px solid var(--ok);border-radius:12px;padding:10px 12px}
+.picked.on{display:flex}.picked b{display:block}.picked small{color:var(--mut)}
+.picked button{padding:6px 10px}
+.bigin{font-size:28px!important;font-weight:700;text-align:center}
+.tipos{display:grid;gap:8px}
+.tipo{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.tipo.act{border-color:var(--red);background:var(--okbg)}
+.tipo .t b{display:block}.tipo .t small{color:var(--mut)}
+.cnt{display:flex;align-items:center;gap:10px}
+.cnt button{width:40px;height:40px;padding:0;font-size:22px;border-radius:50%}
+.cnt span{min-width:22px;text-align:center;font-weight:700;font-size:18px}
+.hint{color:var(--mut);font-size:13px}
+.calc{margin-top:14px;background:var(--bg);border-radius:12px;padding:12px;display:grid;gap:4px}
+.calc div{display:flex;justify-content:space-between}
+.calc .net{font-size:22px;font-weight:800;color:var(--ok);border-top:1px solid var(--line);padding-top:6px;margin-top:4px}
+.neg{color:var(--red)!important}
+.card .pri{width:100%;margin-top:14px;padding:14px;font-size:17px}
+.toast{color:var(--ok);font-weight:600;text-align:center;height:20px;margin-top:8px}
+h2{font-size:15px;margin:22px 0 4px;display:flex;justify-content:space-between;color:var(--mut)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
+.ih{display:flex;align-items:center;gap:10px;padding:12px;cursor:pointer}
+.ih .nm{flex:1;min-width:0}.ih b{display:block;font-weight:600;font-size:15px}.ih small{color:var(--mut)}
+.kg{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.det{display:none;border-top:1px solid var(--line);padding:4px 12px 8px}
+.item.open .det{display:block}
+.he{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.he:last-child{border:0}.he small{color:var(--mut);display:block}.he button{padding:4px 10px;color:var(--red)}.he .bt{display:flex;gap:6px}.he button.ed{color:var(--ink)}.edbar{background:#fff3cd;color:#664d03;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:14px;display:none}.edbar.on{display:block}
+.add2{margin-top:6px;width:100%}
+.lft{display:flex;align-items:center;gap:10px;min-width:0}
+#burger{padding:6px 11px;font-size:20px;line-height:1}
+.pvn{font-size:12px;color:var(--mut)}
+#side{position:fixed;top:0;bottom:0;left:0;width:260px;background:var(--card);border-right:1px solid var(--line);z-index:30;padding:16px 14px;transform:translateX(-100%);transition:transform .2s;display:flex;flex-direction:column;gap:6px;overflow:auto}
+#side.open{transform:none}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;display:none}.scrim.open{display:block}
+.brand{font-weight:800;font-size:18px;color:var(--red)}.brand small{display:block;color:var(--mut);font-weight:400;font-size:12px}
+#side select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px}
+#side nav{display:grid;gap:4px;margin-top:10px}
+.nv{text-align:left;border:0;background:transparent;padding:12px;font-weight:600}
+.nv.on{background:var(--ink);color:var(--bg)}
+.sfoot{margin-top:auto;font-size:12px;color:var(--mut);padding-top:12px;border-top:1px solid var(--line)}
+@media(min-width:900px){#side{transform:none}.scrim{display:none!important}#burger{display:none}body{padding-left:260px}}
+.pvrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.pvrow input{padding:9px 10px;font-size:14px}
+.pvrow.off input{opacity:.5}
+.pvrow label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);white-space:nowrap}
+.role{padding:10px 0;border-bottom:1px solid var(--line)}.role:last-child{border:0}.role b{display:block}.role small{color:var(--mut)}
+.pcard{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--line);cursor:pointer}
+.pcard .nm{flex:1;min-width:0}.pcard small{color:var(--mut)}
+.pcard.cur{background:var(--okbg)}
+.xt{width:100%;overflow:auto}
+.npt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+.npt:last-child{border:0}.npt input{width:20px;height:20px;flex:none}.npt.ex{opacity:.55;cursor:default}.npt small{margin-left:auto;color:var(--mut)}
+.cbanner{display:none;background:#fff3cd;color:#664d03;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:14px;font-weight:600}
+body.closed .cbanner{display:block}
+body.closed #viewC>.card,body.closed #viewI>.card,body.closed .he .bt,body.closed .add2,body.closed #rst,body.closed #rsti{display:none}
+.sesinfo{font-size:12px;color:var(--mut);line-height:1.5;padding:2px 2px 6px}
+#side .btn{width:100%;margin-top:4px}
+.fld{width:100%}
+input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px}
+#afec{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:15px;margin-bottom:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two .bigin{font-size:26px!important}
+.irow{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:11px 12px;cursor:pointer}
+.irow .nm b{display:block;font-weight:600;font-size:15px}.irow .nm small{color:var(--mut)}
+.irow .v{text-align:center;min-width:48px;font-variant-numeric:tabular-nums}.irow .v small{display:block;color:var(--mut);font-size:11px}.irow .v b{font-size:17px}
+.irow .del{padding:4px 10px;color:var(--red)}
+.empty{text-align:center;color:var(--mut);padding:28px 10px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.overlay.open{display:flex}
+.modal{background:var(--card);width:100%;max-width:560px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px}
+@media(min-width:600px){.overlay{align-items:center}.modal{border-radius:18px}}
+.modal h3{margin:0;font-size:17px}.sub{color:var(--mut);font-size:13px;margin:2px 0 10px}
+.tbl{border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:55vh;margin-top:10px}
+.tr{display:grid;grid-template-columns:62px 1fr auto;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.tr:last-child{border:0}.tr.h{background:var(--bg);font-size:12px;color:var(--mut);position:sticky;top:0}
+.tr .k{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}.tr .c{color:var(--mut)}
+.sumtot{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding:12px 2px 0}
+.acts{display:flex;gap:8px;margin-top:14px}.acts button{flex:1}
+</style>
+</head>
+<body>
+<div class="scrim" id="scrim"></div>
+<aside id="side">
+  <div class="brand">Frigorodeo<small>Inventario físico · oct 2026</small></div>
+  <label class="l" style="margin:12px 0 4px">Inventario actual</label>
+  <select id="sesel"></select>
+  <div class="sesinfo" id="sesinfo"></div>
+  <button class="pri btn" id="newinv">+ Nuevo inventario</button>
+  <button class="btn" id="closeinv">Cerrar inventario</button>
+  <nav>
+    <button class="nv on" data-v="c">Cárnico</button>
+    <button class="nv" data-v="i">Insumos</button>
+    <button class="nv" data-v="a">Todos los puntos</button>
+    <button class="nv" data-v="g">Configuración</button>
+  </nav>
+  <div class="sfoot">Modo local · los datos se guardan en este dispositivo.<br>Sin inicio de sesión todavía.</div>
+</aside>
+<header>
+  <div class="top"><div class="lft"><button id="burger" aria-label="Menú">☰</button><div><h1 id="ttl">Inventario cárnico</h1><div class="pvn" id="pvn"></div></div></div><div class="total" id="grand">0,00 kg</div></div>
+  <div class="tools" id="toolsC"><button id="sum">Resumen</button><button id="exp">CSV</button><button id="rst">Borrar todo</button></div>
+</header>
+<main id="viewC">
+  <div class="cbanner">Inventario cerrado · solo lectura. Reábrelo desde el menú para modificarlo.</div>
+  <div class="card">
+    <div class="edbar" id="edbar">✏️ Editando un pesaje</div>
+    <label class="l">1. Código o nombre del producto</label>
+    <div class="cb" id="cb">
+      <input type="text" id="q" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search">
+      <div class="dd" id="dd"></div>
+    </div>
+    <div class="picked" id="picked"><div><b id="pn"></b><small id="pc"></small></div><button id="chg">Cambiar</button></div>
+
+    <div id="step2" style="display:none">
+      <label class="l">2. Peso en la balanza (kg)</label>
+      <input type="number" id="peso" class="bigin" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+      <label class="l">3. ¿Qué canastillas / base tenía?</label>
+      <div class="tipos" id="tipos"></div>
+      <div class="hint" style="margin-top:6px">Sin canastilla: deja todo en 0.</div>
+      <div class="calc">
+        <div><span>Peso bruto</span><span id="cb2">0,00</span></div>
+        <div><span>Tara</span><span id="ct">− 0,00</span></div>
+        <div class="net"><span>Neto</span><span id="cn">0,00 kg</span></div>
+      </div>
+      <button class="pri" id="add" disabled>Agregar al inventario</button>
+      <button class="add2" id="canc" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <h2><span>Productos en el inventario</span><span id="cntp"></span></h2>
+  <div id="list"></div>
+</main>
+
+<main id="viewI" style="display:none">
+  <div class="cbanner">Inventario cerrado · solo lectura. Reábrelo desde el menú para modificarlo.</div>
+  <div class="card">
+    <label class="l">1. Insumo</label>
+    <div class="cb" id="cbi"><input type="text" id="qi" placeholder="Escribe o elige de la lista…" autocomplete="off" inputmode="search"><div class="dd" id="ddi"></div></div>
+    <div class="picked" id="pickedi"><div><b id="pni"></b><small id="pci"></small></div><button id="chgi">Cambiar</button></div>
+    <div id="stepi" style="display:none">
+      <label class="l">2. Cantidad (unidades)</label>
+      <div class="two">
+        <div><div class="hint" style="text-align:center">Nuevos</div><input type="number" id="nu" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+        <div><div class="hint" style="text-align:center">En uso</div><input type="number" id="us" class="bigin" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+      </div>
+      <div class="calc"><div class="net"><span>Total</span><span id="tt">0</span></div></div>
+      <button class="pri" id="savei" disabled>Guardar insumo</button>
+      <button class="add2" id="cancei" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
+      <button class="add2" id="delei" style="display:none;margin-top:8px;width:100%;color:var(--red)">Borrar este insumo</button>
+    </div>
+    <div class="toast" id="toasti"></div>
+  </div>
+  <h2><span>Insumos registrados</span><span id="cnti"></span></h2>
+  <div id="listi"></div>
+  <div class="acts"><button id="expi">CSV insumos</button><button id="rsti">Borrar insumos</button></div>
+</main>
+
+<main id="viewA" style="display:none">
+  <select id="afec"></select>
+  <div class="card" style="padding:0;overflow:hidden"><div id="pcards"></div></div>
+  <h2><span>Total por corte · todos los puntos</span><span id="atot"></span></h2>
+  <input type="search" id="qa" placeholder="Buscar corte o código…">
+  <div class="tbl" id="tbla" style="max-height:none;overflow:visible"></div>
+  <h2><span>Insumos · todos los puntos</span></h2>
+  <div class="tbl" id="tblai" style="max-height:none;overflow:visible"></div>
+  <div class="acts"><button id="expa">CSV cárnico por punto</button><button id="expai">CSV insumos por punto</button></div>
+</main>
+
+<main id="viewG" style="display:none">
+  <div class="card">
+    <h3 style="margin:0 0 4px">Puntos de venta</h3>
+    <div class="sub">Edita el nombre o la ciudad. Desactivar un punto lo oculta del selector pero conserva sus datos.</div>
+    <div id="pvlist"></div>
+    <label class="l">Agregar punto de venta</label>
+    <div class="pvrow" style="border:0;padding:0"><input type="text" id="npn" placeholder="Nombre"><input type="text" id="npc" placeholder="Ciudad"><button class="pri" id="npa" style="padding:10px 14px">Agregar</button></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 4px">Roles</h3>
+    <div class="sub">Se asignan por usuario cuando se active el inicio de sesión con Supabase.</div>
+    <div class="role"><b>Administrador</b><small>Todo: configura puntos y usuarios, registra y corrige inventarios de cualquier punto.</small></div>
+    <div class="role"><b>Jefe de inventarios</b><small>Ve los inventarios de todos los puntos de venta y su consolidado, y configura los puntos. No registra pesajes.</small></div>
+    <div class="role"><b>Contador</b><small>Registra y edita solo el inventario de su punto de venta asignado.</small></div>
+  </div>
+</main>
+
+<div class="overlay" id="ovnew" style="z-index:50"><div class="modal">
+  <h3>Nuevo inventario</h3>
+  <div class="sub">Quién lo hace, qué día y en qué puntos. Se crea un inventario por cada punto marcado.</div>
+  <label class="l">Encargado del inventario</label>
+  <input type="text" id="nenc" placeholder="Nombre y apellido" autocomplete="name">
+  <label class="l">Fecha del inventario</label>
+  <input type="date" id="nfec">
+  <label class="l" style="display:flex;justify-content:space-between"><span>Puntos de venta <b id="nsel"></b></span><span><button type="button" id="nall" style="padding:2px 10px;font-size:12px">Todos</button> <button type="button" id="nnone" style="padding:2px 10px;font-size:12px">Ninguno</button></span></label>
+  <div class="tbl" id="npts" style="max-height:34vh"></div>
+  <div class="acts"><button id="ncancel">Cancelar</button><button class="pri" id="ngo" disabled>Iniciar inventario</button></div>
+</div></div>
+
+<div class="overlay" id="ov"><div class="modal">
+  <h3>Resumen del punto de venta</h3>
+  <div class="sub">Kg netos por producto registrado.</div>
+  <div class="tbl" id="tbl"></div>
+  <div class="sumtot"><span>Total</span><span id="gt2"></span></div>
+  <div class="acts"><button id="close2">Cerrar</button><button class="pri" id="cp">Copiar resumen</button></div>
+</div></div>
+
+<div class="overlay" id="ovc" style="z-index:40"><div class="modal" style="max-width:380px;border-radius:18px;margin:16px">
+  <h3 id="cm"></h3><div class="sub" id="cs"></div>
+  <div class="acts"><button id="cno">Cancelar</button><button class="pri" id="cyes">Sí, borrar</button></div>
+</div></div>
+
+<script>
+const PRODUCTS = [{"r": 6, "c": "01011", "n": "LOMO FINO"}, {"r": 7, "c": "01012", "n": "LOMO FINO SIN CORDON"}, {"r": 8, "c": "01013", "n": "CORDON GOULASH GOURMET - PINCHOS"}, {"r": 9, "c": "01014", "n": "LOMO FINO LIGHT VACIO"}, {"r": 10, "c": "01016", "n": "BABY BEEF VACIO 125 G"}, {"r": 11, "c": "01018", "n": "C. ENTERO LOMO FINO"}, {"r": 12, "c": "01019", "n": "LOMO FINO VACIO"}, {"r": 13, "c": "01021", "n": "LOMO ANCHO"}, {"r": 14, "c": "01023", "n": "TOMAHAWK CE LOMO ANCHO"}, {"r": 15, "c": "01024", "n": "NEW YORK CE LOMO ANCHO"}, {"r": 16, "c": "01025", "n": "MAR DE PLATA CE LOMO ANCHO"}, {"r": 17, "c": "01026", "n": "RIB EYE CE LOMO ANCHO"}, {"r": 18, "c": "01027", "n": "T-BONE CE LOMO ANCHO"}, {"r": 19, "c": "01028", "n": "C. ENTERO LOMO ANCHO"}, {"r": 20, "c": "01029", "n": "LOMO ANCHO AL VACIO"}, {"r": 21, "c": "10311", "n": "LE PUNTA GORDA PICANHA"}, {"r": 22, "c": "10321", "n": "LE LOMO ANCHO BIFE ANGOST"}, {"r": 23, "c": "10331", "n": "LE BIFE CADERA CUADRIL"}, {"r": 24, "c": "10351", "n": "LE VACIO RANCHERO"}, {"r": 25, "c": "10341", "n": "LE CAPON CENTRO PIERNA"}, {"r": 26, "c": "10361", "n": "LE ENTRAÑA ASADO"}, {"r": 27, "c": "10371", "n": "LE HANGUER STEAK"}, {"r": 28, "c": "10411", "n": "TOMAHAWK RODEO"}, {"r": 29, "c": "10412", "n": "NEW YORK STEAK RODEO"}, {"r": 30, "c": "10413", "n": "RIB EYE RODEO"}, {"r": 31, "c": "10414", "n": "T-BONE RODEO"}, {"r": 32, "c": "10511", "n": "LM PUNTA ANCA -PICANHA"}, {"r": 33, "c": "10512", "n": "LM LOMO ANCHO - CHATAS"}, {"r": 34, "c": "10513", "n": "LM TOMAHAWK"}, {"r": 35, "c": "10514", "n": "LM T-BONE"}, {"r": 36, "c": "10515", "n": "LM RIB EYES"}, {"r": 37, "c": "10516", "n": "LM NEW YORK"}, {"r": 38, "c": "10517", "n": "LM CENTRO CADERA"}, {"r": 39, "c": "10518", "n": "LM COLITA CUADRIL - EMP"}, {"r": 40, "c": "10519", "n": "LM FALDA - VACIO"}, {"r": 41, "c": "10523", "n": "LM HANGER STEAK - L. VISC"}, {"r": 42, "c": "10524", "n": "LM ENTRAÑA"}, {"r": 43, "c": "01031", "n": "PUNTA GORDA"}, {"r": 44, "c": "01038", "n": "C. ENTERO PUNTA GORDA"}, {"r": 45, "c": "01039", "n": "PUNTA GORDA - ANCA VACIO"}, {"r": 46, "c": "01041", "n": "MICO"}, {"r": 47, "c": "01048", "n": "C. ENTERO MICO"}, {"r": 48, "c": "01049", "n": "MICO - MUCHACHO - BOLLO VACIO"}, {"r": 49, "c": "01051", "n": "ENTRAÑA (ASAR)"}, {"r": 50, "c": "01058", "n": "C. ENTERO ENTRAÑA"}, {"r": 51, "c": "02051", "n": "EMPAREJADURA"}, {"r": 52, "c": "02052", "n": "CENTRO EMPAREJADURA"}, {"r": 53, "c": "02053", "n": "LOMITO DE CADERA"}, {"r": 54, "c": "02058", "n": "C. ENTERO EMPAREJADURA"}, {"r": 55, "c": "02059", "n": "EMPAREJADURA - TETAFULA VACIO"}, {"r": 56, "c": "02061", "n": "CAPON"}, {"r": 57, "c": "02064", "n": "ADOBADA ESPECIAL"}, {"r": 58, "c": "02068", "n": "C. ENTERO CAPON"}, {"r": 59, "c": "02069", "n": "CAPON VACIO"}, {"r": 60, "c": "02071", "n": "FILETE DE LAS CAVERNAS"}, {"r": 61, "c": "02081", "n": "POSTA - ATRAVEZADO"}, {"r": 62, "c": "02083", "n": "GOULASH PRIMERA"}, {"r": 63, "c": "02088", "n": "C. ENTERO POSTA - ATRAVESADO"}, {"r": 64, "c": "02089", "n": "POSTA - BOTA - ATRAVEZADO -VACIO"}, {"r": 65, "c": "02091", "n": "SOBREBARRIGA DELGADA"}, {"r": 66, "c": "02098", "n": "C. ENTERO SOBRE DELGADA"}, {"r": 67, "c": "02099", "n": "SOBREBARRIGA DELGADA VACIO"}, {"r": 68, "c": "02101", "n": "BOLA DE PIERNA - BOLA ESPALDILLA"}, {"r": 69, "c": "02109", "n": "BOLAS PRIMERA AL VACIO -B PIERNA -B ESPALD"}, {"r": 70, "c": "03101", "n": "ASAR FAMILIAR"}, {"r": 71, "c": "03109", "n": "ASAR FAMILIAR LINEA ECONOMICA"}, {"r": 72, "c": "03111", "n": "BISTECK -BARCINO-PALETERO-PALOMILLA"}, {"r": 73, "c": "03118", "n": "C. ENTERO BISTEC"}, {"r": 74, "c": "03119", "n": "BARCINO VACIO (BISTEC) -PALETERO-PALOMILLA"}, {"r": 75, "c": "04121", "n": "CARNE INSDUTRIAL"}, {"r": 76, "c": "04131", "n": "DESMECHAR POPULAR FALDA"}, {"r": 77, "c": "04132", "n": "ESMECHAR ESPECIAL"}, {"r": 78, "c": "04138", "n": "C. ENTERO FALDA"}, {"r": 79, "c": "04139", "n": "ESMECHAR - FALDA - CHAPA VACIO"}, {"r": 80, "c": "04141", "n": "PECHO"}, {"r": 81, "c": "04142", "n": "MOLIDA BURGUER"}, {"r": 82, "c": "04144", "n": "MINI-BURGER RODEO"}, {"r": 83, "c": "04145", "n": "MOLIDA BURGUER F. ORIGINAL"}, {"r": 84, "c": "04147", "n": "MOLIDA BURGUER DE RES (HAMBURGUESA)"}, {"r": 85, "c": "04148", "n": "C. ENTERO PECHO"}, {"r": 86, "c": "04149", "n": "PECHO VACIO"}, {"r": 87, "c": "04151", "n": "LOMO INTERNO PROMOCIONAL"}, {"r": 88, "c": "04158", "n": "C. ENTERO LOMO INTERNO"}, {"r": 89, "c": "04161", "n": "SOBREBARRIGA GRUESA"}, {"r": 90, "c": "04168", "n": "C. ENTERO SOBRE GRUESA"}, {"r": 91, "c": "04169", "n": "SOBREBARRIGA GRUESA VACIO"}, {"r": 92, "c": "04171", "n": "GUISAR POP, - BAT -MORRO"}, {"r": 93, "c": "04172", "n": "MORRO"}, {"r": 94, "c": "04178", "n": "C. ENTERO BATATA MORRO"}, {"r": 95, "c": "04179", "n": "GUISAR POP. - BATATA - MORRO. VACIO"}, {"r": 96, "c": "04181", "n": "GUISADO ECON-BCNITO-ESPDITA-CGTE-B IND, PROM"}, {"r": 97, "c": "04188", "n": "C. ENTERO GUISADO ECO"}, {"r": 98, "c": "04189", "n": "GUIS. LINEA ECON. ALB-MOL-HAM-GOU"}, {"r": 99, "c": "04191", "n": "RECORTE POPULAR"}, {"r": 100, "c": "05211", "n": "MOLIDA ESP, -CGTE-CORDON-BAT BRZ BASE MOL"}, {"r": 101, "c": "05219", "n": "MOLIDA ESPECIAL - CG - CDON - BB VACIO"}, {"r": 102, "c": "05221", "n": "MOLIDA RODEO -REC PV"}, {"r": 103, "c": "05222", "n": "MOLIDA ALBONDIGA RODEO"}, {"r": 104, "c": "05227", "n": "MOLIDA ALBONDIGA VACIO"}, {"r": 105, "c": "05229", "n": "MOLIDA RODEO VACIO-REC PV"}, {"r": 106, "c": "05232", "n": "MOLIDA CORRALERA PASTILLA X KL"}, {"r": 107, "c": "06231", "n": "SALADA SANCOCHO"}, {"r": 108, "c": "06241", "n": "RECORTE SALADO PROMOCIONAL"}, {"r": 109, "c": "06251", "n": "SALADA ESPECIAL"}, {"r": 110, "c": "09809", "n": "AH - POSTA RES ROAT BEEF"}, {"r": 111, "c": "11831", "n": "CARNERO"}, {"r": 112, "c": "10521", "n": "LM ASADO TIRA"}, {"r": 113, "c": "10522", "n": "LM BRISKET - PECHO"}, {"r": 114, "c": "06261", "n": "COSTILLA SALADA"}, {"r": 115, "c": "06271", "n": "HUESO SALADO PROMOCIONAL"}, {"r": 116, "c": "07271", "n": "CESP BRISKET - PECHO PROM/NAL"}, {"r": 117, "c": "07279", "n": "CESP BRISKET - PECHO PROM/NAL VACIO"}, {"r": 118, "c": "07281", "n": "CESP OSOBUCCO - C, BATATA PROM/NAL"}, {"r": 119, "c": "07289", "n": "CESP OSOBUCCO - C, BATATA PROM/NAL AL VACIO"}, {"r": 120, "c": "07291", "n": "CESP BLADE - C PALETERO PROMOCIONAL"}, {"r": 121, "c": "07301", "n": "CESP COSTIASAR"}, {"r": 122, "c": "07302", "n": "COSTILLA ESPECIAL"}, {"r": 123, "c": "07303", "n": "ASADO DE TIRA"}, {"r": 124, "c": "07304", "n": "COSTILLA POPULAR"}, {"r": 125, "c": "07307", "n": "CESP ASADO TIRA VACIO"}, {"r": 126, "c": "07309", "n": "COSTILLA ESPECIAL VACIO"}, {"r": 127, "c": "07311", "n": "CARNE HUESO AGUJA"}, {"r": 128, "c": "07318", "n": "C. ENTERO HUESO AGUJA"}, {"r": 129, "c": "07319", "n": "CARNE HUESO AGUJA AL VACIO"}, {"r": 130, "c": "07321", "n": "HUESO RODEO"}, {"r": 131, "c": "07323", "n": "CARNE HUESO TUETANO"}, {"r": 132, "c": "07329", "n": "HUESO RODEO VACIO"}, {"r": 133, "c": "07331", "n": "HUESO DE PECHO PROMOCIONAL"}, {"r": 134, "c": "07341", "n": "RABO"}, {"r": 135, "c": "07349", "n": "RABO AL VACIO"}, {"r": 136, "c": "07381", "n": "HUESO BLANCO"}, {"r": 137, "c": "07382", "n": "HUESO BLANCO"}, {"r": 138, "c": "08381", "n": "HIGADO"}, {"r": 139, "c": "08389", "n": "HIGADO AL VACIO"}, {"r": 140, "c": "08391", "n": "LENGUA"}, {"r": 141, "c": "08399", "n": "LENGUA VACIO"}, {"r": 142, "c": "08401", "n": "CORAZON"}, {"r": 143, "c": "08411", "n": "BOFE"}, {"r": 144, "c": "08421", "n": "PAJARILLA"}, {"r": 145, "c": "08429", "n": "PAJARILLA AL VACIO"}, {"r": 146, "c": "08431", "n": "RIÑON"}, {"r": 147, "c": "08441", "n": "MONDONGO"}, {"r": 148, "c": "08449", "n": "MONDONGO AL VACIO"}, {"r": 149, "c": "08461", "n": "PATAS PROMOCIONAL X KILO"}, {"r": 150, "c": "08462", "n": "PATAS PROMOCIONAL X KILO"}, {"r": 151, "c": "08471", "n": "CUAJO"}, {"r": 152, "c": "08481", "n": "MONDONGUILLO"}, {"r": 153, "c": "08501", "n": "CHINCHURRIA"}, {"r": 154, "c": "08521", "n": "MALALLO PROMOCIONAL"}, {"r": 155, "c": "08531", "n": "CRIADILLAS"}, {"r": 156, "c": "08541", "n": "UBRE"}, {"r": 157, "c": "08551", "n": "RECORTE LENGUA PROMOCIONAL"}, {"r": 158, "c": "08561", "n": "GALILLO PROMOCIONAL"}, {"r": 159, "c": "08571", "n": "RECORTICO VISCERA"}, {"r": 160, "c": "08581", "n": "OJITOS DE RES"}, {"r": 161, "c": "08591", "n": "MOLLEJAS ARGENTINAS"}, {"r": 162, "c": "08601", "n": "RECORTE CABEZA"}, {"r": 163, "c": "09614", "n": "CHORIZO PARRILLERO"}, {"r": 164, "c": "09616", "n": "CHORIZO AHUMADO"}, {"r": 165, "c": "09617", "n": "MOLIDA TIPO CH"}, {"r": 166, "c": "09618", "n": "CHORIZO PICANTE"}, {"r": 167, "c": "09619", "n": "CHORIZO"}, {"r": 168, "c": "09626", "n": "LONGANIZA AHUMADA"}, {"r": 169, "c": "09627", "n": "MOLIDA TIPO L"}, {"r": 170, "c": "09629", "n": "LONGANIZA"}, {"r": 171, "c": "09637", "n": "MOLIDA TIPO B"}, {"r": 172, "c": "09639", "n": "BUTIFARRA"}, {"r": 173, "c": "09647", "n": "MOLIDA TIPO M"}, {"r": 174, "c": "09649", "n": "MORCILLA"}, {"r": 175, "c": "09719", "n": "AH - CODILLO CERDO"}, {"r": 176, "c": "09729", "n": "AH - CABEZA DE CERDO (AHUMADA)"}, {"r": 177, "c": "09739", "n": "AH - CHULETA CERDO"}, {"r": 178, "c": "09749", "n": "AH - LOMO CERDO"}, {"r": 179, "c": "09759", "n": "AH - TOCINO CERDO"}, {"r": 180, "c": "09769", "n": "AH - COSTILLA CERDO"}, {"r": 181, "c": "09779", "n": "AH - PATICAS CERDO"}, {"r": 182, "c": "09789", "n": "AH - GOULASH CERDO"}, {"r": 183, "c": "10641", "n": "MOLIDA BURGER COMBINADA"}, {"r": 184, "c": "10783", "n": "MOLIDA BURGER CERDO"}, {"r": 185, "c": "10621", "n": "PUNTA DE ANCA CERDO"}, {"r": 186, "c": "10629", "n": "PUNTA DE ANCA CERDO VACIO"}, {"r": 187, "c": "10651", "n": "SOLOMITO DE CERDO"}, {"r": 188, "c": "10658", "n": "C. ENTERO SOLOMILLO"}, {"r": 189, "c": "10659", "n": "SOLOMITO DE CERDO AL VACIO"}, {"r": 190, "c": "10661", "n": "LOMO CAÑON CERDO"}, {"r": 191, "c": "10662", "n": "TOMAHAWK DE CERDO"}, {"r": 192, "c": "10668", "n": "C. ENTERO LOMO CERDO"}, {"r": 193, "c": "10669", "n": "LOMO CAÑON CERDO AL VACIO"}, {"r": 194, "c": "10671", "n": "PULPA PIERNA-BRAZU PREMIUM"}, {"r": 195, "c": "10678", "n": "C. ENTERO PULPA CERDO"}, {"r": 196, "c": "10679", "n": "PULPA PIERNA-BRAZU PREMIUM VACIO"}, {"r": 197, "c": "10691", "n": "CHULETA MARIPOSA SIN P,"}, {"r": 198, "c": "10699", "n": "CHULETA MARIPOSA SIN P,"}, {"r": 199, "c": "10701", "n": "PERNIL CERDO PIEL-HUESO LOC,"}, {"r": 200, "c": "10703", "n": "LONCHA DE CERDO"}, {"r": 201, "c": "10707", "n": "LONCHA DE CERDO VACIO"}, {"r": 202, "c": "10711", "n": "COSTILLA BARRIGA CANTONESA"}, {"r": 203, "c": "10712", "n": "COSTILLA SAN LUIS DE CERDO"}, {"r": 204, "c": "10713", "n": "TOMAHAWK DE CERDO"}, {"r": 205, "c": "10714", "n": "BABY BACK CERDO"}, {"r": 206, "c": "10718", "n": "C. ENTERO COSTILLA CERDO"}, {"r": 207, "c": "10719", "n": "COSTILLA ESPECIAL CERDO AL VACIO"}, {"r": 208, "c": "10721", "n": "CODILLO OSSOBUCO CERDO"}, {"r": 209, "c": "10722", "n": "OSOBUCCO ESPECIAL CERDO"}, {"r": 210, "c": "10729", "n": "CODILLO OSSOBUCO CERDO VACIO"}, {"r": 211, "c": "10731", "n": "BARRIGUERO TOCINO"}, {"r": 212, "c": "10737", "n": "C. ENTERO PANCETA"}, {"r": 213, "c": "10738", "n": "C. ENTERO TOCINA CUADRADO"}, {"r": 214, "c": "10739", "n": "BARRIGUERO TOCINO AL VACIO"}, {"r": 215, "c": "10741", "n": "PIEL CHICHARRON CERDO"}, {"r": 216, "c": "10742", "n": "PIEL ENTERA SIN CABEZA"}, {"r": 217, "c": "10743", "n": "PIEL ENTERA CON CABEZA"}, {"r": 218, "c": "10749", "n": "PIEL CHICHARRON CERDO VACIO"}, {"r": 219, "c": "10751", "n": "PATICAS CERDO"}, {"r": 220, "c": "10759", "n": "PATICAS CERDO AL VACIO"}, {"r": 221, "c": "10761", "n": "AZADURA PICADA"}, {"r": 222, "c": "10781", "n": "GOULASH DE CERDO"}, {"r": 223, "c": "10784", "n": "MOLIDA ALBONDIGA CERDO"}, {"r": 224, "c": "10782", "n": "MOLIDA ESPECIAL CERDO"}, {"r": 225, "c": "10788", "n": "C. ENTERO GOULASH CERDO"}, {"r": 226, "c": "10791", "n": "CABEZA DE CERDO"}, {"r": 227, "c": "10801", "n": "HUESO CERDO"}, {"r": 228, "c": "10821", "n": "CERDO SALADO"}, {"r": 229, "c": "10822", "n": "OSEO SALADO DE CERDO"}, {"r": 230, "c": "10831", "n": "EMPELLA CERDO"}, {"r": 231, "c": "10832", "n": "CHICHARRONCITO"}, {"r": 232, "c": "10838", "n": "EMPELLA TETILLA"}, {"r": 233, "c": "10841", "n": "OREJITAS DE CERDO"}, {"r": 234, "c": "10851", "n": "BISTEC DE CERDO"}, {"r": 235, "c": "10852", "n": "CHULETA DE CUELLO"}, {"r": 236, "c": "10853", "n": "BONDIOLA DE CERDO"}, {"r": 237, "c": "10858", "n": "C. ENTERO BONDIOLA"}, {"r": 238, "c": "10859", "n": "BONDIOLA DE CERDO"}, {"r": 239, "c": "10881", "n": "GRASA DE CERDO PARA EMBUTIDOS"}, {"r": 240, "c": "13931", "n": "POLLO ENT, REFRIG"}, {"r": 241, "c": "13935", "n": "POLLO CAMPESINO"}, {"r": 242, "c": "13941", "n": "PECHUGA REFRIG"}, {"r": 243, "c": "13942", "n": "FILETE DE PECHUGA"}, {"r": 244, "c": "13945", "n": "PECHUGA CAMPESINA"}, {"r": 245, "c": "13946", "n": "PIEL HUESO PECHUGA"}, {"r": 246, "c": "13947", "n": "PECHUGA CAMPESINA VACIO"}, {"r": 247, "c": "13949", "n": "PECHUGA REFRIG. AL VACIO"}, {"r": 248, "c": "13951", "n": "PERNIL REFRIG"}, {"r": 249, "c": "13952", "n": "MUSLO REFRIG"}, {"r": 250, "c": "13953", "n": "CONTRAMUSLO"}, {"r": 251, "c": "13961", "n": "ALA MIXTA REFRIG. (CON COSTILLAL)"}, {"r": 252, "c": "13962", "n": "ALA ESPECIAL"}, {"r": 253, "c": "13963", "n": "MINIMUSLO"}, {"r": 254, "c": "13974", "n": "PATICAS DE POLLO"}, {"r": 255, "c": "09998", "n": "SEBO DEVOLUCION RES FAM PRIMERA"}, {"r": 256, "c": "09999", "n": "SEBO DEVOLUCION RES FAM SEGUNDA"}, {"r": 257, "c": "99999", "n": "SEBO LIMP. VISCERAS"}, {"r": 258, "c": "10871", "n": "SEBO DE CERDO"}, {"r": 259, "c": "10873", "n": "DEVOLUCION OSEO CERDO"}, {"r": 260, "c": "07361", "n": "SEBO LIMP. OSEO"}, {"r": 261, "c": "07383", "n": "DEVOLUCION OSEO RES"}, {"r": 262, "c": "07391", "n": "ASERRIN"}, {"r": 263, "c": "10811", "n": "ASERRIN PORCINO"}, {"r": 264, "c": "08511", "n": "GRASA DE PECHO"}, {"r": 265, "c": "13971", "n": "MENUDENCIA X UND"}, {"r": 266, "c": "13992", "n": "MOLLEJAS X UND"}, {"r": 267, "c": "10833", "n": "MANT. DE CERDO UND X 800 GRAMOS"}, {"r": 268, "c": "10834", "n": "MANT. DE CERDO UND X 3000 GRAMOS"}, {"r": 269, "c": "10835", "n": "MANT. DE CERDO UND X 500 GRAMOS"}, {"r": 270, "c": "10836", "n": "MANT. DE CERDO UND X 250 GRAMOS"}, {"r": 271, "c": "10837", "n": "MANT. DE CERDO UND X 1000 GRAMOS"}, {"r": 272, "c": "08512", "n": "GRASA NAT. DE RES X 800 GRAMOS (UND)"}, {"r": 273, "c": "08513", "n": "GRASA NAT. DE RES X 3000 GRAMOS (UND)"}, {"r": 274, "c": "10951", "n": "COMBO MUNDIAL X4"}, {"r": 275, "c": "10952", "n": "COMBO MUNDIAL X6"}];
+const TIPOS = [
+  {id:'med', n:'Canastilla mediana', kg:1.8},
+  {id:'gra', n:'Canastilla grande', kg:2.0},
+  {id:'bas', n:'Base', kg:1.5},
+  {id:'emb', n:'Base de embutidos', kg:1.25},
+];
+const PUNTOS_SEED = [{"id":"77375736-4dc1-456a-bb6c-7cc66304c9d0","nombre":"Almendros","ciudad":"Santa Marta"},{"id":"557ddf93-500f-48a9-96d2-1f7fcf28adaf","nombre":"Av Del Rio","ciudad":"Santa Marta"},{"id":"3f8c1ab1-a94b-40c3-a71a-2222fa99f485","nombre":"Av Libertador","ciudad":"Santa Marta"},{"id":"27744f02-5d72-4dd3-842b-91aabcc911e3","nombre":"Av Rio","ciudad":"Santa Marta"},{"id":"eed03178-cbc9-4ece-afc2-bfe8b4f64931","nombre":"Bastidas","ciudad":"Santa Marta"},{"id":"d8ae9e7a-6adf-4508-a2d4-cf068cb67e7c","nombre":"Bavaria","ciudad":"Santa Marta"},{"id":"5bbaa894-3d88-45c2-8840-ecb973d1ba36","nombre":"Cienaga","ciudad":"Ciénaga"},{"id":"7d0c4b78-a8f1-4fe4-b363-75fa0b0fdca9","nombre":"El Parque","ciudad":"Santa Marta"},{"id":"2a2399ec-9467-4989-b469-c10179dfd3c4","nombre":"Gaira","ciudad":"Santa Marta"},{"id":"362522c2-486d-4d93-b789-02a66cb5a2ba","nombre":"Galaxia","ciudad":"Santa Marta"},{"id":"0bc94576-24af-4b46-81e7-62a9a5b87cab","nombre":"La 30","ciudad":"Santa Marta"},{"id":"47a92722-2290-4c52-9abf-0c5be0a5a6c9","nombre":"La Paz","ciudad":"Santa Marta"},{"id":"ea78b235-d04b-4532-af77-6230a6df891a","nombre":"Manzanares","ciudad":"Santa Marta"},{"id":"beb519d1-5d1c-4a62-b505-47627fa6a414","nombre":"María Eugenia","ciudad":"Santa Marta"},{"id":"99550ec9-edb8-40af-a21c-58dc35a9445d","nombre":"Nogales","ciudad":"Santa Marta"},{"id":"1b9a16b2-1211-499a-ba0f-1bf1941b1a22","nombre":"Rodadero","ciudad":"Santa Marta"},{"id":"bfbe8212-a615-4c45-89e7-e59b8e9f8025","nombre":"Rodeo Móvil","ciudad":"Santa Marta"},{"id":"51206aac-11b7-44bd-8994-a03ee1210240","nombre":"Terminal","ciudad":"Santa Marta"},{"id":"dbd53f7e-8570-4728-b82f-268f867a044a","nombre":"Vía 40","ciudad":"Barranquilla"},{"id":"ea44e6ef-3589-47e2-9a02-8324f15ee15f","nombre":"Zuca","ciudad":"Santa Marta"}];
+const rd=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const LK='frigorodeo_inv_v1', LKI='frigorodeo_ins_v1', PK='frigorodeo_pv_v1', CK='frigorodeo_pv_cur_v1', SK='frigorodeo_ses_v1', EK='frigorodeo_enc_v1';
+let puntos=rd(PK,null)||PUNTOS_SEED.map(p=>({...p,activo:true}));
+// un inventario = punto de venta + fecha. id = "<punto>|<fecha>"
+let sesiones=rd(SK,[]);
+let sesId=rd(CK,null); if(!sesiones.find(s=>s.id===sesId))sesId=null;
+let pvId=null,fecha=null,KEY='',KEYI='';
+let data={}; // r -> [{bruto,tara,neto,det,t}]  (del inventario actual)
+let ins={};  // id -> {n,u,t}                    (del inventario actual)
+const save=()=>{if(KEY)wr(KEY,data)};
+const ses=()=>sesiones.find(s=>s.id===sesId);
+const cerrado=()=>!!(ses()&&ses().cerrado);
+function loadPv(){const s=ses();
+  if(!s){KEY=KEYI='';data={};ins={};pvId=fecha=null;return}
+  pvId=s.pid;fecha=s.fecha;KEY=LK+':'+s.id;KEYI=LKI+':'+s.id;data=rd(KEY,{});ins=rd(KEYI,{})}
+const pvNombre=id=>(puntos.find(p=>p.id===id)||{nombre:'—'}).nombre;
+const slug=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const fmtF=f=>new Date(f+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'});
+const hm=ts=>ts?new Date(ts).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'}):'';
+const dm=ts=>ts?new Date(ts).toLocaleDateString('es-CO',{day:'numeric',month:'short'})+' '+hm(ts):'';
+const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmt=n=>n.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round(n*100)/100;
+const $=id=>document.getElementById(id);
+function ask(msg,sub){return new Promise(res=>{
+  $('cm').textContent=msg;$('cs').textContent=sub||'';$('ovc').classList.add('open');
+  const done=v=>{$('ovc').classList.remove('open');$('cyes').onclick=$('cno').onclick=null;res(v)};
+  $('cyes').onclick=()=>done(true);$('cno').onclick=()=>done(false);
+})}
+const tot=r=>r2((data[r]||[]).reduce((s,e)=>s+e.neto,0));
+const grand=()=>r2(PRODUCTS.reduce((s,p)=>s+tot(p.r),0));
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const registered=()=>PRODUCTS.filter(p=>(data[p.r]||[]).length);
+let cur=null, cnt={}, hi=0, shown=[], editing=null;
+
+/* ---- combobox ---- */
+function matches(){
+  const q=norm($('q').value.trim());
+  if(!q)return PRODUCTS.slice();
+  const w=q.split(/\s+/);
+  return PRODUCTS.filter(p=>{const s=p.c+' '+norm(p.n);return w.every(x=>s.includes(x))})
+    .sort((a,b)=>(b.c===q)-(a.c===q)||(b.c.startsWith(q))-(a.c.startsWith(q)));
+}
+function drawDD(){
+  shown=matches(); hi=Math.min(hi,Math.max(0,shown.length-1));
+  $('dd').innerHTML=shown.length?shown.map((p,i)=>`<div class="opt ${i==hi?'sel':''}" data-i="${i}"><span class="c">${p.c}</span><span>${p.n}</span>${(data[p.r]||[]).length?`<span class="hv">${fmt(tot(p.r))} kg</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
+  $('dd').classList.add('open');
+  const s=$('dd').querySelector('.sel'); if(s)s.scrollIntoView({block:'nearest'});
+}
+const closeDD=()=>$('dd').classList.remove('open');
+function pick(p,idx){
+  if(!ses()||cerrado())return;
+  cur=p; cnt={}; closeDD(); editing=null;
+  $('q').style.display='none'; $('picked').classList.add('on');
+  $('pn').textContent=p.n; $('pc').textContent='Cód. '+p.c+((data[p.r]||[]).length?' · ya lleva '+fmt(tot(p.r))+' kg':'');
+  $('step2').style.display='block'; $('peso').value=''; 
+  const ed=idx!=null&&(data[p.r]||[])[idx];
+  if(ed){editing={r:p.r,i:idx};cnt={...ed.det};$('peso').value=ed.bruto}
+  $('chg').style.display=ed?'none':'';$('edbar').classList.toggle('on',!!ed);$('canc').style.display=ed?'':'none';
+  $('add').textContent=ed?'Guardar cambios':'Agregar al inventario';
+  drawTipos(); recalc();
+  setTimeout(()=>$('peso').focus(),30);
+}
+function reset(){
+  cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar al inventario'; $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
+  $('step2').style.display='none'; hi=0;
+}
+$('q').onfocus=()=>{hi=0;drawDD()};
+$('q').oninput=()=>{hi=0;drawDD()};
+$('q').onkeydown=e=>{
+  if(e.key==='ArrowDown'){hi=Math.min(hi+1,shown.length-1);drawDD();e.preventDefault()}
+  else if(e.key==='ArrowUp'){hi=Math.max(hi-1,0);drawDD();e.preventDefault()}
+  else if(e.key==='Enter'){const ex=shown.filter(p=>p.c===$('q').value.trim());pick(ex.length===1?ex[0]:shown[hi]||shown[0]);e.preventDefault()}
+  else if(e.key==='Escape')closeDD();
+};
+$('dd').onmousedown=e=>{const o=e.target.closest('.opt');if(o){e.preventDefault();pick(shown[+o.dataset.i])}};
+document.addEventListener('click',e=>{if(!$('cb').contains(e.target))closeDD()});
+$('chg').onclick=()=>{reset();$('q').focus()};
+
+/* ---- peso / tara ---- */
+const tara=()=>r2(TIPOS.reduce((s,t)=>s+t.kg*(cnt[t.id]||0),0));
+function recalc(){
+  const b=parseFloat($('peso').value)||0,t=tara(),n=r2(b-t);
+  $('cb2').textContent=fmt(b);$('ct').textContent='− '+fmt(t);
+  $('cn').textContent=fmt(n)+' kg';$('cn').classList.toggle('neg',n<0);
+  $('add').disabled=!(cur&&b>0&&n>=0);
+}
+function drawTipos(){
+  $('tipos').innerHTML=TIPOS.map(t=>`<div class="tipo ${cnt[t.id]?'act':''}">
+    <div class="t"><b>${t.n}</b><small>${String(t.kg).replace('.',',')} kg c/u</small></div>
+    <div class="cnt"><button data-t="${t.id}" data-d="-1">−</button><span>${cnt[t.id]||0}</span><button data-t="${t.id}" data-d="1">+</button></div></div>`).join('');
+}
+$('tipos').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;
+  cnt[b.dataset.t]=Math.max(0,(cnt[b.dataset.t]||0)+ +b.dataset.d);drawTipos();recalc()};
+$('peso').oninput=recalc;
+$('peso').onkeydown=e=>{if(e.key==='Enter'&&!$('add').disabled)$('add').click()};
+function addEntry(){
+  const bruto=r2(parseFloat($('peso').value)),t=tara();
+  const ent={bruto,tara:t,neto:r2(bruto-t),det:{...cnt},t:Date.now()};
+  let msg;
+  if(editing){const old=data[editing.r][editing.i];ent.t=old.t;ent.edit=Date.now();data[editing.r][editing.i]=ent;
+    msg=`✓ Pesaje de ${cur.n} corregido: ${fmt(old.neto)} → ${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`;openR=cur.r}
+  else{(data[cur.r]=data[cur.r]||[]).push(ent);msg=`✓ ${cur.n}: +${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`}
+  save();
+  reset();render();$('toast').textContent=msg;setTimeout(()=>{if($('toast').textContent===msg)$('toast').textContent=''},4000);
+  $('q').focus();
+}
+$('add').onclick=addEntry;
+$('canc').onclick=()=>{reset()};
+
+/* ---- lista registrada ---- */
+const describe=x=>TIPOS.filter(t=>x.det[t.id]).map(t=>x.det[t.id]+'× '+t.n.replace('Canastilla ','').toLowerCase()).join(', ')||'sin canastilla';
+let openR=null;
+function render(){
+  const rows=registered();
+  $('grand').textContent=fmt(grand())+' kg'; $('cntp').textContent=rows.length+' producto'+(rows.length==1?'':'s');
+  $('list').innerHTML=rows.length?rows.map(p=>{const e=data[p.r];
+    return `<div class="item ${openR==p.r?'open':''}" data-r="${p.r}"><div class="ih"><div class="nm"><b>${p.n}</b><small>${p.c} · ${e.length} pesaje${e.length==1?'':'s'}</small></div><div class="kg">${fmt(tot(p.r))} kg</div></div>
+      <div class="det">${e.map((x,i)=>`<div class="he"><div><b>${fmt(x.neto)} kg</b><small>${fmt(x.bruto)} bruto − ${fmt(x.tara)} tara (${describe(x)})${' · '+dm(x.t)}${x.edit?' · editado':''}</small></div><div class="bt"><button class="ed" data-edit="${i}">Editar</button><button data-del="${i}">Quitar</button></div></div>`).join('')}
+      <button class="add2" data-more="1">+ Agregar otro pesaje</button><button class="add2" data-delp="1" style="color:var(--red)">Borrar producto completo</button></div></div>`}).join('')
+    :'<div class="empty">Aún no hay productos. Busca uno arriba para empezar.<br>Solo aparecen los que registres.</div>';
+}
+$('list').onclick=e=>{
+  const it=e.target.closest('.item');if(!it)return;const r=it.dataset.r;
+  if(cerrado()&&e.target.closest('[data-del],[data-edit],[data-more],[data-delp]'))return;
+  const d=e.target.closest('[data-del]');
+  if(d){const x=data[r][+d.dataset.del],p=PRODUCTS.find(p=>p.r==r);
+    ask('¿Quitar este pesaje?',p.n+' · '+fmt(x.neto)+' kg').then(ok=>{if(!ok)return;
+      data[r].splice(+d.dataset.del,1);if(!data[r].length){delete data[r];openR=null}
+      if(editing&&editing.r==r)reset();save();render()});return}
+  if(e.target.closest('[data-delp]')){const p=PRODUCTS.find(p=>p.r==r);
+    ask('¿Borrar "'+p.n+'" del inventario?','Se eliminan sus '+data[r].length+' pesaje(s), '+fmt(tot(r))+' kg.').then(ok=>{if(!ok)return;
+      delete data[r];openR=null;if(editing&&editing.r==r)reset();save();render()});return}
+  const ed=e.target.closest('[data-edit]');
+  if(ed){pick(PRODUCTS.find(p=>p.r==r),+ed.dataset.edit);window.scrollTo({top:0,behavior:'smooth'});return}
+  if(e.target.closest('[data-more]')){pick(PRODUCTS.find(p=>p.r==r));window.scrollTo({top:0,behavior:'smooth'});return}
+  openR=openR==r?null:r;render();
+};
+
+/* ---- resumen / csv / borrar ---- */
+$('sum').onclick=()=>{
+  const rows=registered();
+  $('tbl').innerHTML='<div class="tr h"><span>CÓD.</span><span>PRODUCTO</span><span>KG</span></div>'+
+    (rows.length?rows.map(p=>`<div class="tr"><span class="c">${p.c}</span><span>${p.n}</span><span class="k">${fmt(tot(p.r))}</span></div>`).join(''):'<div class="empty">Sin registros</div>');
+  $('gt2').textContent=fmt(grand())+' kg';$('ov').classList.add('open');
+};
+$('close2').onclick=()=>$('ov').classList.remove('open');
+$('ov').onclick=e=>{if(e.target===$('ov'))$('close2').click()};
+$('cp').onclick=async()=>{
+  const c=n=>String(n).replace('.',',');
+  const s=registered().map(p=>p.c+'\t'+p.n+'\t'+c(tot(p.r))).join('\n')+'\nTOTAL\t\t'+c(grand());
+  try{await navigator.clipboard.writeText(s);$('cp').textContent='¡Copiado!'}catch(e){$('cp').textContent='No se pudo copiar'}
+  setTimeout(()=>$('cp').textContent='Copiar resumen',1500)};
+$('rst').onclick=()=>ask('¿Borrar TODO el inventario?','Se eliminan todos los productos y pesajes registrados. No se puede deshacer.').then(ok=>{if(ok){data={};openR=null;reset();save();render()}});
+$('exp').onclick=()=>{
+  const c=v=>'"'+(typeof v==='number'?String(v).replace('.',','):String(v).replace(/"/g,'""'))+'"';
+  const h=['COD','PRODUCTO','PESAJES','TOTAL NETO KG','TARA TOTAL KG','BRUTO TOTAL KG',...TIPOS.map(t=>t.n+' (und)')];
+  const L=[h].concat(registered().map(p=>{const e=data[p.r];
+    return [p.c,p.n,e.length,tot(p.r),r2(e.reduce((s,x)=>s+x.tara,0)),r2(e.reduce((s,x)=>s+x.bruto,0)),...TIPOS.map(t=>e.reduce((s,x)=>s+(x.det[t.id]||0),0))]}));
+  L.push(['','TOTAL','',grand()]);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv'}));
+  a.download='inventario_'+slug(pvNombre(pvId))+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+};
+loadPv();
+render();
+
+/* ================= INSUMOS ================= */
+const INSUMOS = ["ROLLOS DE BASCULAS", "ROLLOS TERMICOS", "BOLSAS DE TORITO X 5 KILOS", "BOLSAS DE TORITO X 10 KILOS", "BOLSAS TRANSPARENTES - 8 X 12", "BOLSAS TRANSPARENTES - 10 X 15", "BOLSAS TRANSPARENTES - 14 X 20", "BOLSA ECOLOGICA", "BOLSA DE BASURAS NEGRA", "BOLSA DE BASURAS ROJA", "BOLSA DE BASURAS BLANCA", "TOALLAS O LIMPIONES", "PAPEL HIGIENICO", "PAPEL LIMPIA VIDRIO", "ROLLOS DE DATAFONO", "ROLLO TURNOMETRO", "CINTA DE IMPRESORA", "CINTA TRANSPARENTE ANCHA", "LIGAS AMARRA BILLETES", "LAPICEROS NEGROS", "TALONARIO ORDEN PEDIDO", "TALONARIO RESUMEN RECOGIDA EFECTIVO", "TALONARIO CUADRE CAJA", "TALONARIO CAJA MENOR", "TAL. COMPROBANTE DE EGRESO", "CAJA DE GRAPAS", "MARCADOR", "BOLSA DE CARBON", "ABONO SOLIDO X 1 KILO", "ABONO SOLIDO X 2 KILO", "ABONO LIQUIDO X 1 LITRO", "ABONO LIQUIDO X 5 LITRO", "AJI ARTESANAL PICOR MAXX DON PANCHO X 250 GRS", "AJI DE LA ABUELA DON PANCHO X 250 GRS", "ENCURTIDO ARTESANAL DON PANCHO X 250 GRS"].map((n,i)=>({id:i,n}));
+const saveI=()=>wr(KEYI,ins);
+const num=v=>{const x=parseFloat(v);return isNaN(x)?0:x};
+const fq=n=>String(r2(n)).replace('.',',');
+let iCur=null,iEdit=false,ihi=0,ishown=[];
+function matchesI(){const q=norm($('qi').value.trim());if(!q)return INSUMOS.slice();
+  const w=q.split(/\s+/);return INSUMOS.filter(p=>{const s=norm(p.n);return w.every(x=>s.includes(x))})}
+function drawDDI(){ishown=matchesI();ihi=Math.min(ihi,Math.max(0,ishown.length-1));
+  $('ddi').innerHTML=ishown.length?ishown.map((p,i)=>`<div class="opt ${i==ihi?'sel':''}" data-i="${i}"><span>${p.n}</span>${ins[p.id]?`<span class="hv">${fq(ins[p.id].n+ins[p.id].u)} und</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
+  $('ddi').classList.add('open');const s=$('ddi').querySelector('.sel');if(s)s.scrollIntoView({block:'nearest'})}
+const closeDDI=()=>$('ddi').classList.remove('open');
+function resetI(){iCur=null;iEdit=false;$('qi').value='';$('qi').style.display='';$('pickedi').classList.remove('on');$('stepi').style.display='none';$('cancei').style.display='none';$('delei').style.display='none';$('chgi').style.display='';$('savei').textContent='Guardar insumo';ihi=0}
+function pickI(p){if(!ses()||cerrado())return;iCur=p;closeDDI();const e=ins[p.id];iEdit=!!e;
+  $('qi').style.display='none';$('pickedi').classList.add('on');$('pni').textContent=p.n;$('pci').textContent=e?'Ya registrado: se reemplazan los valores':'';
+  $('stepi').style.display='block';$('nu').value=e?e.n:'';$('us').value=e?e.u:'';
+  $('cancei').style.display=e?'':'none';$('delei').style.display=e?'':'none';$('savei').textContent=e?'Guardar cambios':'Guardar insumo';recalcI();setTimeout(()=>$('nu').focus(),30)}
+function recalcI(){$('tt').textContent=fq(num($('nu').value)+num($('us').value));
+  $('savei').disabled=!(iCur&&($('nu').value!==''||$('us').value!==''))}
+$('qi').onfocus=()=>{ihi=0;drawDDI()};$('qi').oninput=()=>{ihi=0;drawDDI()};
+$('qi').onkeydown=e=>{if(e.key==='ArrowDown'){ihi=Math.min(ihi+1,ishown.length-1);drawDDI();e.preventDefault()}
+  else if(e.key==='ArrowUp'){ihi=Math.max(ihi-1,0);drawDDI();e.preventDefault()}
+  else if(e.key==='Enter'){if(ishown[ihi])pickI(ishown[ihi]);e.preventDefault()}else if(e.key==='Escape')closeDDI()};
+$('ddi').onmousedown=e=>{const o=e.target.closest('.opt');if(o){e.preventDefault();pickI(ishown[+o.dataset.i])}};
+document.addEventListener('click',e=>{if(!$('cbi').contains(e.target))closeDDI()});
+$('chgi').onclick=()=>{resetI();$('qi').focus()};$('cancei').onclick=resetI;
+$('delei').onclick=()=>{const p=iCur;ask('¿Borrar "'+p.n+'"?','Se elimina su conteo de nuevos y en uso.').then(ok=>{if(ok){delete ins[p.id];saveI();resetI();renderI()}})};
+$('nu').oninput=$('us').oninput=recalcI;
+$('us').onkeydown=$('nu').onkeydown=e=>{if(e.key==='Enter'&&!$('savei').disabled)$('savei').click()};
+$('savei').onclick=()=>{const was=iEdit,p=iCur;ins[p.id]={n:num($('nu').value),u:num($('us').value),t:Date.now()};saveI();
+  const msg=`✓ ${p.n}: ${fq(ins[p.id].n)} nuevos + ${fq(ins[p.id].u)} en uso = ${fq(ins[p.id].n+ins[p.id].u)}`;
+  resetI();renderI();$('toasti').textContent=msg;setTimeout(()=>{if($('toasti').textContent===msg)$('toasti').textContent=''},4000);$('qi').focus()};
+function renderI(){const rows=INSUMOS.filter(p=>ins[p.id]);$('cnti').textContent=rows.length+' insumo'+(rows.length==1?'':'s');
+  $('listi').innerHTML=rows.length?'<div class="item">'+rows.map(p=>{const e=ins[p.id];return `<div class="irow" data-id="${p.id}" style="border-bottom:1px solid var(--line)"><div class="nm"><b>${p.n}</b><small>${e.t?dm(e.t)+' · ':''}Toca para editar</small></div>
+    <div class="v"><small>Nuevos</small><b>${fq(e.n)}</b></div><div class="v"><small>En uso</small><b>${fq(e.u)}</b></div><div class="v"><small>Total</small><b>${fq(e.n+e.u)}</b></div></div>`}).join('')+'</div>':'<div class="empty">Aún no hay insumos registrados.</div>'}
+$('listi').onclick=e=>{const r=e.target.closest('.irow');if(!r)return;pickI(INSUMOS[+r.dataset.id]);window.scrollTo({top:0,behavior:'smooth'})};
+$('rsti').onclick=()=>ask('¿Borrar TODOS los insumos?','Se eliminan los conteos de nuevos y en uso.').then(ok=>{if(ok){ins={};resetI();saveI();renderI()}});
+$('expi').onclick=()=>{const c=v=>'"'+String(v).replace(/"/g,'""').replace(/^(\d+)\.(\d+)$/,'$1,$2')+'"';
+  const L=[['INSUMO','NUEVOS','EN USO','TOTAL']].concat(INSUMOS.filter(p=>ins[p.id]).map(p=>[p.n,ins[p.id].n,ins[p.id].u,r2(ins[p.id].n+ins[p.id].u)]));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv'}));
+  a.download='insumos_'+slug(pvNombre(pvId))+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click()};
+
+/* ================= SIDEBAR / INVENTARIOS / CONSOLIDADO ================= */
+const VIEWS={c:'viewC',i:'viewI',a:'viewA',g:'viewG'};
+const TITLES={c:'Inventario cárnico',i:'Insumos',a:'Todos los puntos',g:'Configuración'};
+let view='c';
+function openSide(o){$('side').classList.toggle('open',o);$('scrim').classList.toggle('open',o)}
+$('burger').onclick=()=>openSide(true);$('scrim').onclick=()=>openSide(false);
+function go(v){view=v;
+  Object.entries(VIEWS).forEach(([k,id])=>$(id).style.display=k===v?'':'none');
+  $('toolsC').style.display=v==='c'?'':'none';$('grand').style.display=v==='c'?'':'none';
+  $('ttl').textContent=TITLES[v];
+  document.querySelectorAll('.nv').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='i')renderI();if(v==='a')renderA();if(v==='g')renderG();
+  openSide(false);window.scrollTo(0,0)}
+document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>go(b.dataset.v));
+
+const activos=()=>puntos.filter(p=>p.activo!==false);
+const sesLabel=s=>pvNombre(s.pid)+' · '+fmtF(s.fecha)+(s.cerrado?' · cerrado':'');
+function updateUI(){
+  const S=sesiones.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||pvNombre(a.pid).localeCompare(pvNombre(b.pid)));
+  $('sesel').innerHTML=S.length?S.map(s=>`<option value="${s.id}">${sesLabel(s)}</option>`).join(''):'<option>Sin inventarios</option>';
+  if(sesId)$('sesel').value=sesId;
+  const s=ses();
+  $('pvn').textContent=s?pvNombre(s.pid)+' · '+fmtF(s.fecha)+' · '+s.encargado:'Sin inventario iniciado';
+  $('sesinfo').innerHTML=s?`Encargado: <b>${s.encargado}</b><br>Fecha: ${fmtF(s.fecha)}<br>Iniciado: ${dm(s.creado)}<br>${s.cerrado?'Cerrado: '+dm(s.cerrado):'Estado: abierto'}`:'Inicia un inventario para empezar.';
+  $('closeinv').textContent=s&&s.cerrado?'Reabrir inventario':'Cerrar inventario';
+  $('closeinv').style.display=s?'':'none';
+  document.body.classList.toggle('closed',cerrado());
+}
+function switchSes(id){
+  wr(CK,id);sesId=id;loadPv();reset();resetI();openR=null;updateUI();render();renderI();
+  if(view==='a')renderA()}
+$('sesel').onchange=()=>{switchSes($('sesel').value);openSide(false)};
+$('closeinv').onclick=()=>{const s=ses();if(!s)return;
+  if(s.cerrado){ask('¿Reabrir el inventario?',sesLabel(s)).then(ok=>{if(ok){s.cerrado=null;wr(SK,sesiones);updateUI();render();renderI()}});return}
+  ask('¿Cerrar el inventario?','Queda en solo lectura y se registra la hora de cierre. Podrás reabrirlo. '+pvNombre(s.pid)+' · '+fmtF(s.fecha)).then(ok=>{
+    if(ok){s.cerrado=new Date().toISOString();wr(SK,sesiones);reset();resetI();updateUI();render();renderI();openSide(false)}})};
+$('cyes').textContent='Confirmar';
+
+/* ---- modal: nuevo inventario (encargado, fecha, uno o varios puntos) ---- */
+function drawNpts(){const F=$('nfec').value;
+  $('npts').innerHTML=activos().map(p=>{const ex=sesiones.find(s=>s.id===p.id+'|'+F);
+    return `<label class="npt ${ex?'ex':''}"><input type="checkbox" value="${p.id}" ${ex?'disabled':''}><span>${p.nombre}</span>${ex?'<small>ya iniciado ese día</small>':''}</label>`}).join('')||'<div class="empty">No hay puntos activos. Actívalos en Configuración.</div>';
+  updNgo()}
+function updNgo(){const n=$('npts').querySelectorAll('input:checked').length;
+  $('nsel').textContent=n?'· '+n+' seleccionado'+(n==1?'':'s'):'';
+  $('ngo').disabled=!($('nenc').value.trim()&&$('nfec').value&&n)}
+function openNew(){$('nenc').value=rd(EK,'');$('nfec').value=hoy();drawNpts();
+  $('ncancel').style.display=sesiones.length?'':'none';$('ovnew').classList.add('open');openSide(false);
+  setTimeout(()=>($('nenc').value?$('npts'):$('nenc')).focus?.(),50)}
+$('newinv').onclick=openNew;
+$('ncancel').onclick=()=>$('ovnew').classList.remove('open');
+$('nfec').onchange=drawNpts;$('nenc').oninput=updNgo;$('npts').onchange=updNgo;
+$('nall').onclick=()=>{$('npts').querySelectorAll('input:not(:disabled)').forEach(c=>c.checked=true);updNgo()};
+$('nnone').onclick=()=>{$('npts').querySelectorAll('input').forEach(c=>c.checked=false);updNgo()};
+$('ngo').onclick=()=>{
+  const enc=$('nenc').value.trim(),F=$('nfec').value;wr(EK,enc);
+  const ids=[...$('npts').querySelectorAll('input:checked')].map(c=>c.value);
+  let flat=false;try{flat=!!(localStorage.getItem(LK)||localStorage.getItem(LKI))}catch(e){}
+  let first=null,moved=false;
+  ids.forEach(pid=>{const id=pid+'|'+F;
+    sesiones.push({id,pid,fecha:F,encargado:enc,creado:new Date().toISOString(),cerrado:null});
+    // migra datos locales de versiones anteriores a este inventario
+    try{[[LK+':'+pid,LK+':'+id],[LKI+':'+pid,LKI+':'+id],...(flat?[[LK,LK+':'+id],[LKI,LKI+':'+id]]:[])].forEach(([a,b])=>{
+      const v=localStorage.getItem(a);if(v&&!localStorage.getItem(b)){localStorage.setItem(b,v);localStorage.removeItem(a);moved=true}});flat=false}catch(e){}
+    first=first||id});
+  wr(SK,sesiones);$('ovnew').classList.remove('open');switchSes(first);go('c');
+  const m='✓ Inventario iniciado'+(ids.length>1?' en '+ids.length+' puntos':' en '+pvNombre(ids[0]))+' · '+fmtF(F)+(moved?' · se conservaron tus datos anteriores':'');
+  $('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},5000)};
+
+/* ---- consolidado por fecha: lee los inventarios guardados en este dispositivo ---- */
+const tt=e=>e?r2(e.reduce((a,x)=>a+x.neto,0)):0;
+const sumNeto=c=>r2(Object.values(c).reduce((s,e)=>s+tt(e),0));
+const snapS=s=>({s,c:rd(LK+':'+s.id,{}),i:rd(LKI+':'+s.id,{})});
+function renderA(){
+  const fechas=[...new Set(sesiones.map(s=>s.fecha))].sort().reverse(),sel=$('afec'),prev=sel.value;
+  sel.innerHTML=fechas.map(f=>`<option value="${f}">Inventario del ${fmtF(f)}</option>`).join('')||'<option>Sin inventarios</option>';
+  sel.value=fechas.includes(prev)?prev:(fecha&&fechas.includes(fecha)?fecha:fechas[0]);
+  const F=sel.value,S=sesiones.filter(s=>s.fecha===F).map(snapS).sort((a,b)=>pvNombre(a.s.pid).localeCompare(pvNombre(b.s.pid)));
+  const sinInv=activos().filter(p=>!S.some(x=>x.s.pid===p.id));
+  $('pcards').innerHTML=S.map(x=>{const kg=sumNeto(x.c),np=Object.keys(x.c).length,ni=Object.keys(x.i).length;
+    return `<div class="pcard ${x.s.id===sesId?'cur':''}" data-id="${x.s.id}"><div class="nm"><b>${pvNombre(x.s.pid)}</b><small>${x.s.encargado} · ${dm(x.s.creado)} · ${x.s.cerrado?'cerrado '+dm(x.s.cerrado):'abierto'}<br>${np} cortes · ${ni} insumos</small></div><div class="kg">${kg?fmt(kg)+' kg':'—'}</div></div>`}).join('')
+    +sinInv.map(p=>`<div class="pcard" style="opacity:.55;cursor:default"><div class="nm"><b>${p.nombre}</b><small>Sin inventario ese día</small></div></div>`).join('')
+    ||'<div class="empty">Aún no hay inventarios. Inicia uno desde el menú.</div>';
+  const q=norm($('qa').value.trim());
+  const rows=PRODUCTS.map(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return {p,per,t,n:per.filter(v=>v>0).length}})
+    .filter(r=>r.t>0&&(!q||(r.p.c+' '+norm(r.p.n)).includes(q)));
+  $('atot').textContent=fmt(r2(rows.reduce((a,r)=>a+r.t,0)))+' kg';
+  $('tbla').innerHTML='<div class="tr h" style="grid-template-columns:62px 1fr auto"><span>CÓD.</span><span>CORTE</span><span>KG TOTAL</span></div>'+
+    (rows.length?rows.map(r=>`<div class="tr" style="grid-template-columns:62px 1fr auto"><span class="c">${r.p.c}</span><span>${r.p.n}<br><small style="color:var(--mut)">${r.n} punto${r.n==1?'':'s'}: ${S.map((x,i)=>r.per[i]>0?pvNombre(x.s.pid)+' '+fmt(r.per[i]):'').filter(Boolean).join(' · ')}</small></span><span class="k">${fmt(r.t)}</span></div>`).join(''):'<div class="empty">Aún no hay pesajes ese día.</div>');
+  const ir=INSUMOS.map(p=>{let n=0,u=0;S.forEach(x=>{const e=x.i[p.id];if(e){n+=e.n;u+=e.u}});return {p,n,u}}).filter(r=>r.n||r.u);
+  $('tblai').innerHTML='<div class="tr h" style="grid-template-columns:1fr 54px 54px 54px"><span>INSUMO</span><span>NUEVOS</span><span>EN USO</span><span>TOTAL</span></div>'+
+    (ir.length?ir.map(r=>`<div class="tr" style="grid-template-columns:1fr 54px 54px 54px"><span>${r.p.n}</span><span class="k">${fq(r.n)}</span><span class="k">${fq(r.u)}</span><span class="k">${fq(r.n+r.u)}</span></div>`).join(''):'<div class="empty">Aún no hay insumos registrados ese día.</div>')}
+$('afec').onchange=renderA;$('qa').oninput=renderA;
+$('pcards').onclick=e=>{const c=e.target.closest('.pcard[data-id]');if(c){switchSes(c.dataset.id);go('c')}};
+function csvDown(L,name){const c=v=>'"'+(typeof v==='number'?String(v).replace('.',','):String(v).replace(/"/g,'""'))+'"';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv'}));
+  a.download=name+'.csv';a.click()}
+const Sf=()=>{const F=$('afec').value;return {F,S:sesiones.filter(s=>s.fecha===F).map(snapS)}};
+$('expa').onclick=()=>{const {F,S}=Sf();
+  const L=[['COD','PRODUCTO',...S.map(x=>pvNombre(x.s.pid)),'TOTAL KG']];
+  PRODUCTS.forEach(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));if(t>0)L.push([p.c,p.n,...per,t])});
+  L.push(['','TOTAL',...S.map(x=>sumNeto(x.c)),r2(S.reduce((a,x)=>a+sumNeto(x.c),0))]);
+  L.push([]);L.push(['FECHA INVENTARIO',F]);S.forEach(x=>L.push([pvNombre(x.s.pid),'Encargado: '+x.s.encargado,'Inicio: '+dm(x.s.creado),x.s.cerrado?'Cierre: '+dm(x.s.cerrado):'Abierto']));
+  csvDown(L,'inventario_todos_los_puntos_'+F)};
+$('expai').onclick=()=>{const {F,S}=Sf();
+  const L=[['INSUMO',...S.flatMap(x=>[pvNombre(x.s.pid)+' nuevos',pvNombre(x.s.pid)+' en uso']),'TOTAL']];
+  INSUMOS.forEach(p=>{const v=S.flatMap(x=>{const e=x.i[p.id]||{n:0,u:0};return [e.n,e.u]}),t=r2(v.reduce((a,b)=>a+b,0));if(t>0)L.push([p.n,...v,t])});
+  csvDown(L,'insumos_todos_los_puntos_'+F)};
+
+/* ---- configuración de puntos de venta ---- */
+function renderG(){
+  $('pvlist').innerHTML=puntos.map((p,i)=>`<div class="pvrow ${p.activo===false?'off':''}" data-i="${i}"><input type="text" data-f="nombre" value="${(p.nombre||'').replace(/"/g,'&quot;')}"><input type="text" data-f="ciudad" value="${(p.ciudad||'').replace(/"/g,'&quot;')}" placeholder="Ciudad"><label><input type="checkbox" data-f="activo" ${p.activo===false?'':'checked'}>Activo</label></div>`).join('')}
+$('pvlist').onchange=e=>{const row=e.target.closest('.pvrow');if(!row)return;const p=puntos[+row.dataset.i],f=e.target.dataset.f;
+  if(f==='activo'){if(!e.target.checked&&activos().length<=1&&p.activo!==false){e.target.checked=true;return}p.activo=e.target.checked}
+  else{const v=e.target.value.trim();if(f==='nombre'&&!v){e.target.value=p.nombre;return}p[f]=v}
+  wr(PK,puntos);updateUI();renderG()};
+$('npa').onclick=()=>{const n=$('npn').value.trim();if(!n)return;
+  if(puntos.some(p=>norm(p.nombre)===norm(n))){$('npn').focus();return}
+  puntos.push({id:(crypto.randomUUID?crypto.randomUUID():'pv-'+Date.now()),nombre:n,ciudad:$('npc').value.trim(),activo:true});
+  $('npn').value=$('npc').value='';wr(PK,puntos);renderG()};
+
+/* arranque */
+updateUI();
+if(!sesiones.length)openNew();else go('c');
+</script>
+</body>
+</html>
