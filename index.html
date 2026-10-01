@@ -110,6 +110,26 @@ input[type=date]{width:100%;padding:12px;border:1px solid var(--line);border-rad
 .sumtot{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding:12px 2px 0}
 .acts{display:flex;gap:8px;margin-top:14px}.acts button{flex:1}
 
+/* ---- reporte ---- */
+.rh{margin:18px 0 0;font-size:15px}
+.tc{display:grid;grid-template-columns:1fr 54px 70px;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
+.tc:last-child{border:0}.tc.h{background:var(--bg);font-size:12px;color:var(--mut)}
+.tc .k{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+@media print{body>*:not(#ov){display:none!important}#ov{position:static!important;display:block!important;background:none!important}#ov .modal{max-height:none!important;box-shadow:none;max-width:none;border-radius:0;padding:0}#ov .acts{display:none}.tbl{max-height:none!important;overflow:visible!important}body{padding-left:0!important;background:#fff}}
+/* ---- multi-pesaje / reportes / bloqueo ---- */
+.mini{display:none;background:var(--okbg);border:1px solid var(--ok);border-radius:12px;padding:8px 12px;margin-top:10px}
+.mini .mh{display:flex;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--line)}
+.mini .mr{display:grid;grid-template-columns:24px 1fr auto;gap:6px;align-items:center;padding:4px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.mini .mr:last-child{border:0}.mini .mr.ed{background:#fff3cd;color:#664d03;border-radius:8px}
+.mini .mr small{color:var(--mut);margin-left:6px}
+.mini .bt{display:flex;gap:4px}.mini .bt button{min-height:36px;padding:4px 10px;font-size:13px}.mini .bt button.dl{color:var(--red)}
+body.closed .mini .bt{display:none}
+#fin{margin-top:8px;width:100%}
+.nblock{display:none;background:#fff3cd;color:#664d03;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:14px}
+.nblock.on{display:block}.nblock button{margin-top:8px;width:100%}
+.chk{display:grid;gap:4px}.chk label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px}.chk input{width:20px;height:20px}
+.rsel{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px;min-height:44px}
+.rprev{margin-top:14px;font-size:14px;line-height:1.6}
 /* ---- UX pass: accesibilidad, toque, movimiento ---- */
 :root{--mut:#6a645d}
 @media (prefers-color-scheme:dark){:root{--mut:#a9a299}}
@@ -159,6 +179,7 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
     <button class="nv on" data-v="c">Cárnico</button>
     <button class="nv" data-v="i">Insumos</button>
     <button class="nv" data-v="a">Todos los puntos</button>
+    <button class="nv" data-v="r">Reportes</button>
     <button class="nv" data-v="g">Configuración</button>
   </nav>
   <div class="sfoot">Modo local · los datos se guardan en este dispositivo.<br>Sin inicio de sesión todavía.</div>
@@ -178,6 +199,7 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
     </div>
     <div class="picked" id="picked"><div><b id="pn"></b><small id="pc"></small></div><button id="chg">Cambiar</button></div>
 
+    <div class="mini" id="mini"></div>
     <div id="step2" style="display:none">
       <label class="l" for="peso">2. Peso en la balanza (kg)</label>
       <input type="number" id="peso" class="bigin" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
@@ -190,7 +212,8 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
         <div class="net"><span>Neto</span><span id="cn">0,00 kg</span></div>
       </div>
       <div class="warn" id="warn" role="alert">La tara de las canastillas supera el peso. Revisa el peso o quita canastillas.</div>
-      <button class="pri" id="add" disabled>Agregar al inventario</button>
+      <button class="pri" id="add" disabled>Agregar pesaje</button>
+      <button class="add2" id="fin" style="display:none">Terminar este corte</button>
       <button class="add2" id="canc" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -230,9 +253,31 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
   <h2><span>Total por corte · todos los puntos</span><span id="atot"></span></h2>
   <input type="search" id="qa" aria-label="Buscar corte o código" placeholder="Buscar corte o código…">
   <div class="tbl" id="tbla" style="max-height:none;overflow:visible"></div>
+  <h2><span>Canastillas por punto</span></h2>
+  <div class="tbl" id="tblc2" style="max-height:none;overflow:auto"></div>
   <h2><span>Insumos · todos los puntos</span></h2>
   <div class="tbl" id="tblai" style="max-height:none;overflow:visible"></div>
   <div class="acts"><button id="expa">CSV cárnico por punto</button><button id="expai">CSV insumos por punto</button></div>
+</main>
+
+<main id="viewR" style="display:none">
+  <div class="card">
+    <h3 style="margin:0 0 4px">Reportes en PDF</h3>
+    <div class="sub">Genera un PDF para imprimir, archivar o enviar al jefe de inventarios.</div>
+    <label class="l" for="rtipo">Tipo de reporte</label>
+    <select id="rtipo" class="rsel"><option value="p">Inventario de un punto de venta</option><option value="a">Consolidado de todos los puntos (por fecha)</option></select>
+    <div id="rp"><label class="l" for="rses">Inventario</label><select id="rses" class="rsel"></select></div>
+    <div id="ra" style="display:none"><label class="l" for="rfec">Fecha</label><select id="rfec" class="rsel"></select></div>
+    <div class="l" id="lrinc" style="margin:14px 0 2px;font-size:13px;color:var(--mut)">Incluir en el reporte</div>
+    <div class="chk" role="group" aria-labelledby="lrinc">
+      <label><input type="checkbox" id="rc" checked> Cárnico (kg por corte)</label>
+      <label><input type="checkbox" id="rk" checked> Canastillas</label>
+      <label><input type="checkbox" id="ri" checked> Insumos</label>
+    </div>
+    <div class="calc rprev" id="rprev"></div>
+    <button class="pri" id="rgen">Descargar PDF</button>
+    <div class="toast" id="rmsg" role="status" aria-live="polite"></div>
+  </div>
 </main>
 
 <main id="viewG" style="display:none">
@@ -254,22 +299,26 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
 
 <div class="overlay" id="ovnew" style="z-index:50"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="hnew">
   <h3 id="hnew">Nuevo inventario</h3>
-  <div class="sub">Quién lo hace, qué día y en qué puntos. Se crea un inventario por cada punto marcado.</div>
+  <div class="sub">Quién lo hace, qué día y en qué punto. Solo puede haber un inventario abierto a la vez.</div>
+  <div class="nblock" id="nblock" role="alert"></div>
   <label class="l" for="nenc">Encargado del inventario</label>
   <input type="text" id="nenc" placeholder="Nombre y apellido" autocomplete="name">
   <label class="l" for="nfec">Fecha del inventario</label>
   <input type="date" id="nfec">
-  <label class="l" style="display:flex;justify-content:space-between"><span>Puntos de venta <b id="nsel"></b></span><span><button type="button" id="nall" style="padding:2px 10px;font-size:12px">Todos</button> <button type="button" id="nnone" style="padding:2px 10px;font-size:12px">Ninguno</button></span></label>
-  <div class="tbl" id="npts" style="max-height:34vh"></div>
+  <div class="l" id="lpv" style="margin:14px 0 6px;font-size:13px;color:var(--mut)">Punto de venta <b id="nsel"></b></div>
+  <div class="tbl" id="npts" role="radiogroup" aria-labelledby="lpv" style="max-height:34vh"></div>
   <div class="acts"><button id="ncancel">Cancelar</button><button class="pri" id="ngo" disabled>Iniciar inventario</button></div>
 </div></div>
 
 <div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="hsum">
-  <h3 id="hsum">Resumen del punto de venta</h3>
-  <div class="sub">Kg netos por producto registrado.</div>
+  <h3 id="hsum">Reporte del inventario</h3>
+  <div class="sub" id="repinfo"></div>
   <div class="tbl" id="tbl"></div>
-  <div class="sumtot"><span>Total</span><span id="gt2"></span></div>
-  <div class="acts"><button id="close2">Cerrar</button><button class="pri" id="cp">Copiar resumen</button></div>
+  <div class="sumtot"><span>Total cárnico</span><span id="gt2"></span></div>
+  <h4 class="rh">Canastillas en el punto</h4>
+  <div class="tbl" id="tblc" style="max-height:none"></div>
+  <div class="sumtot"><span>Total canastillas</span><span id="gtc"></span></div>
+  <div class="acts"><button id="close2">Cerrar</button><button id="prt">PDF</button><button class="pri" id="cp">Copiar resumen</button></div>
 </div></div>
 
 <div class="overlay" id="ovc" style="z-index:40"><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="cm" aria-describedby="cs" style="max-width:380px;border-radius:18px;margin:16px">
@@ -298,6 +347,7 @@ let data={}; // r -> [{bruto,tara,neto,det,t}]  (del inventario actual)
 let ins={};  // id -> {n,u,t}                    (del inventario actual)
 const save=()=>{if(KEY)wr(KEY,data)};
 const ses=()=>sesiones.find(s=>s.id===sesId);
+const abierto=()=>sesiones.find(s=>!s.cerrado);
 const cerrado=()=>!!(ses()&&ses().cerrado);
 function loadPv(){const s=ses();
   if(!s){KEY=KEYI='';data={};ins={};pvId=fecha=null;return}
@@ -311,8 +361,8 @@ const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()
 const fmt=n=>n.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const r2=n=>Math.round(n*100)/100;
 const $=id=>document.getElementById(id);
-function ask(msg,sub){return new Promise(res=>{
-  $('cm').textContent=msg;$('cs').textContent=sub||'';$('ovc').classList.add('open');
+function ask(msg,sub,o){o=o||{};return new Promise(res=>{
+  $('cm').textContent=msg;$('cs').textContent=sub||'';$('cyes').textContent=o.ok||'Sí, borrar';$('cno').style.display=o.single?'none':'';$('ovc').classList.add('open');
   const done=v=>{$('ovc').classList.remove('open');$('cyes').onclick=$('cno').onclick=null;res(v)};
   $('cyes').onclick=()=>done(true);$('cno').onclick=()=>done(false);
 })}
@@ -341,18 +391,18 @@ function pick(p,idx){
   if(!ses()||cerrado())return;
   cur=p; cnt={}; closeDD(); editing=null;
   $('q').style.display='none'; $('picked').classList.add('on');
-  $('pn').textContent=p.n; $('pc').textContent='Cód. '+p.c+((data[p.r]||[]).length?' · ya lleva '+fmt(tot(p.r))+' kg':'');
+  $('pn').textContent=p.n; $('pc').textContent=pcText();
   $('step2').style.display='block'; $('peso').value=''; 
   const ed=idx!=null&&(data[p.r]||[])[idx];
   if(ed){editing={r:p.r,i:idx};cnt={...ed.det};$('peso').value=ed.bruto}
   $('chg').style.display=ed?'none':'';$('edbar').classList.toggle('on',!!ed);$('canc').style.display=ed?'':'none';
-  $('add').textContent=ed?'Guardar cambios':'Agregar al inventario';
-  drawTipos(); recalc();
+  $('add').textContent=ed?'Guardar cambios':'Agregar pesaje';$('fin').style.display=ed?'none':'';
+  drawTipos(); recalc(); drawMini();
   setTimeout(()=>$('peso').focus(),30);
 }
 function reset(){
-  cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar al inventario'; $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
-  $('step2').style.display='none'; hi=0;
+  cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar pesaje'; $('fin').style.display='none'; $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
+  $('step2').style.display='none'; hi=0; drawMini();
 }
 $('q').onfocus=()=>{hi=0;drawDD()};
 $('q').oninput=()=>{hi=0;drawDD()};
@@ -383,17 +433,40 @@ $('tipos').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;
   cnt[b.dataset.t]=Math.max(0,(cnt[b.dataset.t]||0)+ +b.dataset.d);drawTipos();recalc()};
 $('peso').oninput=recalc;
 $('peso').onkeydown=e=>{if(e.key==='Enter'&&!$('add').disabled)$('add').click()};
+const pcText=()=>cur?'Cód. '+cur.c+((data[cur.r]||[]).length?' · lleva '+fmt(tot(cur.r))+' kg':''):'';
+function drawMini(){
+  const e=cur?(data[cur.r]||[]):[];
+  if(!cur||!e.length){$('mini').style.display='none';$('mini').innerHTML='';return}
+  $('mini').style.display='block';
+  $('mini').innerHTML=`<div class="mh"><b>Pesajes de este corte (${e.length})</b><b>${fmt(tot(cur.r))} kg</b></div>`+
+    e.map((x,i)=>`<div class="mr ${editing&&editing.i===i?'ed':''}"><span>${i+1}.</span><span>${fmt(x.neto)} kg<small>${fmt(x.bruto)} − ${fmt(x.tara)}</small></span><span class="bt"><button data-medit="${i}" aria-label="Editar pesaje ${i+1}">Editar</button><button class="dl" data-mdel="${i}" aria-label="Quitar pesaje ${i+1}">Quitar</button></span></div>`).join('');
+}
+$('mini').onclick=e=>{
+  const ed=e.target.closest('[data-medit]'),dl=e.target.closest('[data-mdel]');
+  if(!cur||cerrado())return;
+  if(ed){pick(cur,+ed.dataset.medit);return}
+  if(dl){const i=+dl.dataset.mdel,x=data[cur.r][i];
+    ask('¿Quitar este pesaje?',cur.n+' · '+fmt(x.neto)+' kg').then(ok=>{if(!ok)return;
+      data[cur.r].splice(i,1);if(!data[cur.r].length)delete data[cur.r];
+      if(editing&&editing.i===i){const p=cur;save();reset();render();pick(p);return}
+      if(editing&&editing.i>i)editing.i--;
+      save();render();$('pc').textContent=pcText();drawMini()})}
+};
 function addEntry(){
   const bruto=r2(parseFloat($('peso').value)),t=tara();
   const ent={bruto,tara:t,neto:r2(bruto-t),det:{...cnt},t:Date.now()};
-  let msg;
+  let msg,p=cur;
   if(editing){const old=data[editing.r][editing.i];ent.t=old.t;ent.edit=Date.now();data[editing.r][editing.i]=ent;
-    msg=`✓ Pesaje de ${cur.n} corregido: ${fmt(old.neto)} → ${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`;openR=cur.r}
-  else{(data[cur.r]=data[cur.r]||[]).push(ent);msg=`✓ ${cur.n}: +${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`}
-  save();
-  reset();render();$('toast').textContent=msg;setTimeout(()=>{if($('toast').textContent===msg)$('toast').textContent=''},4000);
-  $('q').focus();
+    msg=`✓ Pesaje de ${cur.n} corregido: ${fmt(old.neto)} → ${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`;openR=cur.r;
+    save();reset();render();pick(p)}   // vuelve al mismo corte para seguir agregando
+  else{(data[cur.r]=data[cur.r]||[]).push(ent);
+    msg=`✓ Pesaje ${data[cur.r].length} de ${cur.n}: +${fmt(ent.neto)} kg · total del corte ${fmt(tot(cur.r))} kg`;
+    save();render();
+    // el corte sigue abierto: limpia peso y canastillas para el siguiente pesaje
+    cnt={};$('peso').value='';$('pc').textContent=pcText();drawTipos();recalc();drawMini();$('peso').focus()}
+  $('toast').textContent=msg;setTimeout(()=>{if($('toast').textContent===msg)$('toast').textContent=''},5000);
 }
+$('fin').onclick=()=>{const n=cur?cur.n:'';reset();$('q').focus();$('toast').textContent=n?'✓ Corte terminado: '+n:''}
 $('add').onclick=addEntry;
 $('canc').onclick=()=>{reset()};
 
@@ -427,17 +500,26 @@ $('list').onclick=e=>{
 };
 
 /* ---- resumen / csv / borrar ---- */
+const canas=d=>{const por={};TIPOS.forEach(x=>por[x.id]=0);let pes=0,tara=0;
+  Object.values(d).forEach(e=>e.forEach(w=>{pes++;tara+=w.tara;TIPOS.forEach(x=>por[x.id]+=(w.det[x.id]||0))}));
+  return {por,pes,tara:r2(tara),total:TIPOS.reduce((s,x)=>s+por[x.id],0)}};
 $('sum').onclick=()=>{
-  const rows=registered();
+  const rows=registered(),s=ses(),cn=canas(data);
+  $('repinfo').innerHTML=s?`<b>${pvNombre(s.pid)}</b> · ${fmtF(s.fecha)}<br>Encargado: ${s.encargado} · ${s.cerrado?'cerrado '+dm(s.cerrado):'abierto (iniciado '+dm(s.creado)+')'}`:'';
   $('tbl').innerHTML='<div class="tr h"><span>CÓD.</span><span>PRODUCTO</span><span>KG</span></div>'+
     (rows.length?rows.map(p=>`<div class="tr"><span class="c">${p.c}</span><span>${p.n}</span><span class="k">${fmt(tot(p.r))}</span></div>`).join(''):'<div class="empty">Sin registros</div>');
-  $('gt2').textContent=fmt(grand())+' kg';$('ov').classList.add('open');
+  $('gt2').textContent=fmt(grand())+' kg';
+  $('tblc').innerHTML='<div class="tc h"><span>TIPO</span><span style="text-align:right">UND</span><span style="text-align:right">TARA KG</span></div>'+
+    TIPOS.map(x=>`<div class="tc"><span>${x.n} <small style="color:var(--mut)">(${String(x.kg).replace('.',',')} kg)</small></span><span class="k">${cn.por[x.id]}</span><span class="k">${fmt(r2(cn.por[x.id]*x.kg))}</span></div>`).join('');
+  $('gtc').textContent=cn.total+' und · '+fmt(cn.tara)+' kg';
+  $('ov').classList.add('open');
 };
+$('prt').onclick=()=>{const s=ses();if(s)pdfPunto(s,{c:true,k:true,i:true},$('prt'))};
 $('close2').onclick=()=>$('ov').classList.remove('open');
 $('ov').onclick=e=>{if(e.target===$('ov'))$('close2').click()};
 $('cp').onclick=async()=>{
   const c=n=>String(n).replace('.',',');
-  const s=registered().map(p=>p.c+'\t'+p.n+'\t'+c(tot(p.r))).join('\n')+'\nTOTAL\t\t'+c(grand());
+  const cn=canas(data);const s=registered().map(p=>p.c+'\t'+p.n+'\t'+c(tot(p.r))).join('\n')+'\nTOTAL\t\t'+c(grand())+'\n\nCANASTILLAS\n'+TIPOS.map(x=>x.n+'\t'+cn.por[x.id]).join('\n')+'\nTOTAL CANASTILLAS\t'+cn.total;
   try{await navigator.clipboard.writeText(s);$('cp').textContent='¡Copiado!'}catch(e){$('cp').textContent='No se pudo copiar'}
   setTimeout(()=>$('cp').textContent='Copiar resumen',1500)};
 $('rst').onclick=()=>ask('¿Borrar TODO el inventario?','Se eliminan todos los productos y pesajes registrados. No se puede deshacer.').then(ok=>{if(ok){data={};openR=null;reset();save();render()}});
@@ -447,6 +529,7 @@ $('exp').onclick=()=>{
   const L=[h].concat(registered().map(p=>{const e=data[p.r];
     return [p.c,p.n,e.length,tot(p.r),r2(e.reduce((s,x)=>s+x.tara,0)),r2(e.reduce((s,x)=>s+x.bruto,0)),...TIPOS.map(t=>e.reduce((s,x)=>s+(x.det[t.id]||0),0))]}));
   L.push(['','TOTAL','',grand()]);
+  const cn=canas(data);L.push([]);L.push(['CANASTILLAS','UNIDADES','TARA KG']);TIPOS.forEach(x=>L.push([x.n,cn.por[x.id],r2(cn.por[x.id]*x.kg)]));L.push(['TOTAL CANASTILLAS',cn.total,cn.tara]);
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv'}));
   a.download='inventario_'+slug(pvNombre(pvId))+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 };
@@ -496,8 +579,8 @@ $('expi').onclick=()=>{const c=v=>'"'+String(v).replace(/"/g,'""').replace(/^(\d
   a.download='insumos_'+slug(pvNombre(pvId))+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click()};
 
 /* ================= SIDEBAR / INVENTARIOS / CONSOLIDADO ================= */
-const VIEWS={c:'viewC',i:'viewI',a:'viewA',g:'viewG'};
-const TITLES={c:'Inventario cárnico',i:'Insumos',a:'Todos los puntos',g:'Configuración'};
+const VIEWS={c:'viewC',i:'viewI',a:'viewA',r:'viewR',g:'viewG'};
+const TITLES={c:'Inventario cárnico',i:'Insumos',a:'Todos los puntos',r:'Reportes',g:'Configuración'};
 let view='c';
 function openSide(o){$('side').classList.toggle('open',o);$('scrim').classList.toggle('open',o);$('burger').setAttribute('aria-expanded',o?'true':'false');if(o)setTimeout(()=>($('sesel')||$('side')).focus(),30)}
 $('burger').onclick=()=>openSide(true);$('scrim').onclick=()=>openSide(false);
@@ -506,7 +589,7 @@ function go(v){view=v;
   $('toolsC').style.display=v==='c'?'':'none';$('grand').style.display=v==='c'?'':'none';
   $('ttl').textContent=TITLES[v];
   document.querySelectorAll('.nv').forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-  if(v==='i')renderI();if(v==='a')renderA();if(v==='g')renderG();
+  if(v==='i')renderI();if(v==='a')renderA();if(v==='r')renderR();if(v==='g')renderG();
   openSide(false);window.scrollTo(0,0)}
 document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>go(b.dataset.v));
 
@@ -528,40 +611,40 @@ function switchSes(id){
   if(view==='a')renderA()}
 $('sesel').onchange=()=>{switchSes($('sesel').value);openSide(false)};
 $('closeinv').onclick=()=>{const s=ses();if(!s)return;
-  if(s.cerrado){ask('¿Reabrir el inventario?',sesLabel(s)).then(ok=>{if(ok){s.cerrado=null;wr(SK,sesiones);updateUI();render();renderI()}});return}
-  ask('¿Cerrar el inventario?','Queda en solo lectura y se registra la hora de cierre. Podrás reabrirlo. '+pvNombre(s.pid)+' · '+fmtF(s.fecha)).then(ok=>{
-    if(ok){s.cerrado=new Date().toISOString();wr(SK,sesiones);reset();resetI();updateUI();render();renderI();openSide(false)}})};
-$('cyes').textContent='Confirmar';
+  if(s.cerrado){const ab=abierto();if(ab){ask('No se puede reabrir','Ya hay un inventario abierto ('+pvNombre(ab.pid)+' · '+fmtF(ab.fecha)+'). Ciérralo primero: no se pueden hacer dos a la vez.',{ok:'Entendido',single:true});return}
+    ask('¿Reabrir el inventario?',sesLabel(s),{ok:'Reabrir'}).then(ok=>{if(ok){s.cerrado=null;wr(SK,sesiones);updateUI();render();renderI()}});return}
+  ask('¿Cerrar el inventario?','Queda en solo lectura y se registra la hora de cierre. Podrás reabrirlo. '+pvNombre(s.pid)+' · '+fmtF(s.fecha),{ok:'Cerrar inventario'}).then(ok=>{
+    if(ok){s.cerrado=new Date().toISOString();wr(SK,sesiones);reset();resetI();updateUI();render();renderI();openSide(false);go('c');$('sum').click()}})};
 
-/* ---- modal: nuevo inventario (encargado, fecha, uno o varios puntos) ---- */
+
+/* ---- modal: nuevo inventario (encargado, fecha, un punto) ---- */
 function drawNpts(){const F=$('nfec').value;
   $('npts').innerHTML=activos().map(p=>{const ex=sesiones.find(s=>s.id===p.id+'|'+F);
-    return `<label class="npt ${ex?'ex':''}"><input type="checkbox" value="${p.id}" ${ex?'disabled':''}><span>${p.nombre}</span>${ex?'<small>ya iniciado ese día</small>':''}</label>`}).join('')||'<div class="empty">No hay puntos activos. Actívalos en Configuración.</div>';
+    return `<label class="npt ${ex?'ex':''}"><input type="radio" name="npv" value="${p.id}" ${ex?'disabled':''}><span>${p.nombre}</span>${ex?'<small>ya hecho ese día</small>':''}</label>`}).join('')||'<div class="empty">No hay puntos activos. Actívalos en Configuración.</div>';
   updNgo()}
-function updNgo(){const n=$('npts').querySelectorAll('input:checked').length;
-  $('nsel').textContent=n?'· '+n+' seleccionado'+(n==1?'':'s'):'';
-  $('ngo').disabled=!($('nenc').value.trim()&&$('nfec').value&&n)}
+function updNgo(){const ab=abierto(),sel=$('npts').querySelector('input:checked');
+  $('nblock').classList.toggle('on',!!ab);
+  $('nblock').innerHTML=ab?`Ya hay un inventario abierto: <b>${pvNombre(ab.pid)} · ${fmtF(ab.fecha)}</b>. No se pueden hacer dos a la vez: ciérralo para iniciar otro.<button type="button" id="goab">Ir al inventario abierto</button>`:'';
+  $('nsel').textContent=sel?'· '+pvNombre(sel.value):'';
+  $('ngo').disabled=!!ab||!($('nenc').value.trim()&&$('nfec').value&&sel)}
+$('nblock').onclick=e=>{if(e.target.id==='goab'){const ab=abierto();$('ovnew').classList.remove('open');if(ab){switchSes(ab.id);go('c')}}};
 function openNew(){$('nenc').value=rd(EK,'');$('nfec').value=hoy();drawNpts();
   $('ncancel').style.display=sesiones.length?'':'none';$('ovnew').classList.add('open');openSide(false);
   setTimeout(()=>($('nenc').value?$('npts'):$('nenc')).focus?.(),50)}
 $('newinv').onclick=openNew;
 $('ncancel').onclick=()=>$('ovnew').classList.remove('open');
 $('nfec').onchange=drawNpts;$('nenc').oninput=updNgo;$('npts').onchange=updNgo;
-$('nall').onclick=()=>{$('npts').querySelectorAll('input:not(:disabled)').forEach(c=>c.checked=true);updNgo()};
-$('nnone').onclick=()=>{$('npts').querySelectorAll('input').forEach(c=>c.checked=false);updNgo()};
 $('ngo').onclick=()=>{
-  const enc=$('nenc').value.trim(),F=$('nfec').value;wr(EK,enc);
-  const ids=[...$('npts').querySelectorAll('input:checked')].map(c=>c.value);
-  let flat=false;try{flat=!!(localStorage.getItem(LK)||localStorage.getItem(LKI))}catch(e){}
-  let first=null,moved=false;
-  ids.forEach(pid=>{const id=pid+'|'+F;
-    sesiones.push({id,pid,fecha:F,encargado:enc,creado:new Date().toISOString(),cerrado:null});
-    // migra datos locales de versiones anteriores a este inventario
-    try{[[LK+':'+pid,LK+':'+id],[LKI+':'+pid,LKI+':'+id],...(flat?[[LK,LK+':'+id],[LKI,LKI+':'+id]]:[])].forEach(([a,b])=>{
-      const v=localStorage.getItem(a);if(v&&!localStorage.getItem(b)){localStorage.setItem(b,v);localStorage.removeItem(a);moved=true}});flat=false}catch(e){}
-    first=first||id});
-  wr(SK,sesiones);$('ovnew').classList.remove('open');switchSes(first);go('c');
-  const m='✓ Inventario iniciado'+(ids.length>1?' en '+ids.length+' puntos':' en '+pvNombre(ids[0]))+' · '+fmtF(F)+(moved?' · se conservaron tus datos anteriores':'');
+  if(abierto())return;   // regla: un solo inventario abierto
+  const enc=$('nenc').value.trim(),F=$('nfec').value,pid=$('npts').querySelector('input:checked').value,id=pid+'|'+F;wr(EK,enc);
+  if(sesiones.some(s=>s.id===id))return;
+  let flat=false,moved=false;try{flat=!!(localStorage.getItem(LK)||localStorage.getItem(LKI))}catch(e){}
+  sesiones.push({id,pid,fecha:F,encargado:enc,creado:new Date().toISOString(),cerrado:null});
+  // migra datos locales de versiones anteriores a este inventario
+  try{[[LK+':'+pid,LK+':'+id],[LKI+':'+pid,LKI+':'+id],...(flat?[[LK,LK+':'+id],[LKI,LKI+':'+id]]:[])].forEach(([a,b])=>{
+    const v=localStorage.getItem(a);if(v&&!localStorage.getItem(b)){localStorage.setItem(b,v);localStorage.removeItem(a);moved=true}})}catch(e){}
+  wr(SK,sesiones);$('ovnew').classList.remove('open');switchSes(id);go('c');
+  const m='✓ Inventario iniciado en '+pvNombre(pid)+' · '+fmtF(F)+(moved?' · se conservaron tus datos anteriores':'');
   $('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},5000)};
 
 /* ---- consolidado por fecha: lee los inventarios guardados en este dispositivo ---- */
@@ -584,6 +667,11 @@ function renderA(){
   $('atot').textContent=fmt(r2(rows.reduce((a,r)=>a+r.t,0)))+' kg';
   $('tbla').innerHTML='<div class="tr h" style="grid-template-columns:62px 1fr auto"><span>CÓD.</span><span>CORTE</span><span>KG TOTAL</span></div>'+
     (rows.length?rows.map(r=>`<div class="tr" style="grid-template-columns:62px 1fr auto"><span class="c">${r.p.c}</span><span>${r.p.n}<br><small style="color:var(--mut)">${r.n} punto${r.n==1?'':'s'}: ${S.map((x,i)=>r.per[i]>0?pvNombre(x.s.pid)+' '+fmt(r.per[i]):'').filter(Boolean).join(' · ')}</small></span><span class="k">${fmt(r.t)}</span></div>`).join(''):'<div class="empty">Aún no hay pesajes ese día.</div>');
+  const CC=S.map(x=>({s:x.s,c:canas(x.c)})),W='grid-template-columns:1fr '+TIPOS.map(()=>'52px').join(' ')+' 54px';
+  const tc=CC.reduce((a,x)=>a+x.c.total,0);
+  $('tblc2').innerHTML=`<div class="tr h" style="${W};min-width:420px"><span>PUNTO</span>${TIPOS.map(x=>`<span title="${x.n}">${x.n.replace('Canastilla ','').replace('Base de embutidos','B. emb.')}</span>`).join('')}<span>TOTAL</span></div>`+
+    (CC.length?CC.map(x=>`<div class="tr" style="${W};min-width:420px"><span>${pvNombre(x.s.pid)}</span>${TIPOS.map(k=>`<span class="k">${x.c.por[k.id]}</span>`).join('')}<span class="k">${x.c.total}</span></div>`).join('')
+      +`<div class="tr" style="${W};min-width:420px;font-weight:800"><span>TOTAL</span>${TIPOS.map(k=>`<span class="k">${CC.reduce((a,x)=>a+x.c.por[k.id],0)}</span>`).join('')}<span class="k">${tc}</span></div>`:'<div class="empty">Sin inventarios ese día.</div>');
   const ir=INSUMOS.map(p=>{let n=0,u=0;S.forEach(x=>{const e=x.i[p.id];if(e){n+=e.n;u+=e.u}});return {p,n,u}}).filter(r=>r.n||r.u);
   $('tblai').innerHTML='<div class="tr h" style="grid-template-columns:1fr 54px 54px 54px"><span>INSUMO</span><span>NUEVOS</span><span>EN USO</span><span>TOTAL</span></div>'+
     (ir.length?ir.map(r=>`<div class="tr" style="grid-template-columns:1fr 54px 54px 54px"><span>${r.p.n}</span><span class="k">${fq(r.n)}</span><span class="k">${fq(r.u)}</span><span class="k">${fq(r.n+r.u)}</span></div>`).join(''):'<div class="empty">Aún no hay insumos registrados ese día.</div>')}
@@ -597,6 +685,7 @@ $('expa').onclick=()=>{const {F,S}=Sf();
   const L=[['COD','PRODUCTO',...S.map(x=>pvNombre(x.s.pid)),'TOTAL KG']];
   PRODUCTS.forEach(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));if(t>0)L.push([p.c,p.n,...per,t])});
   L.push(['','TOTAL',...S.map(x=>sumNeto(x.c)),r2(S.reduce((a,x)=>a+sumNeto(x.c),0))]);
+  L.push([]);L.push(['CANASTILLAS',...TIPOS.map(x=>x.n),'TOTAL']);S.forEach(x=>{const k=canas(x.c);L.push([pvNombre(x.s.pid),...TIPOS.map(y=>k.por[y.id]),k.total])});
   L.push([]);L.push(['FECHA INVENTARIO',F]);S.forEach(x=>L.push([pvNombre(x.s.pid),'Encargado: '+x.s.encargado,'Inicio: '+dm(x.s.creado),x.s.cerrado?'Cierre: '+dm(x.s.cerrado):'Abierto']));
   csvDown(L,'inventario_todos_los_puntos_'+F)};
 $('expai').onclick=()=>{const {F,S}=Sf();
@@ -615,6 +704,103 @@ $('npa').onclick=()=>{const n=$('npn').value.trim();if(!n)return;
   if(puntos.some(p=>norm(p.nombre)===norm(n))){$('npn').focus();return}
   puntos.push({id:(crypto.randomUUID?crypto.randomUUID():'pv-'+Date.now()),nombre:n,ciudad:$('npc').value.trim(),activo:true});
   $('npn').value=$('npc').value='';wr(PK,puntos);renderG()};
+
+/* ================= REPORTES PDF ================= */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',PDFAT='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+let pdfP=null;
+function loadPdf(){
+  if(window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API.autoTable)return Promise.resolve();
+  if(pdfP)return pdfP;
+  const ld=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('No se pudo cargar '+src));document.head.appendChild(s)});
+  pdfP=ld(PDFJS).then(()=>ld(PDFAT)).catch(e=>{pdfP=null;throw e});return pdfP}
+const RED=[179,38,30];
+function newDoc(titulo,sub){
+  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'pt',format:'letter'}),W=doc.internal.pageSize.getWidth(),M=40;
+  doc.setFillColor(...RED);doc.rect(0,0,W,66,'F');doc.setTextColor(255);
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text(titulo,M,30);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(sub,M,50);doc.setTextColor(30);
+  const ctx={doc,W,M,y:88};
+  ctx.sec=(titulo,o)=>{if(ctx.y>690){doc.addPage();ctx.y=50}
+    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(30);doc.text(titulo,M,ctx.y);
+    doc.autoTable({startY:ctx.y+8,margin:{left:M,right:M},theme:'grid',styles:{fontSize:9,cellPadding:4,lineColor:[220,214,206],textColor:30},
+      headStyles:{fillColor:RED,textColor:255},footStyles:{fillColor:[240,236,230],textColor:30,fontStyle:'bold'},alternateRowStyles:{fillColor:[250,248,245]},
+      didParseCell:d=>{const cs=(o.columnStyles||{})[d.column.index];if(cs&&cs.halign&&d.section!=='body')d.cell.styles.halign=cs.halign},...o});
+    ctx.y=doc.lastAutoTable.finalY+22};
+  ctx.meta=rows=>{doc.autoTable({startY:ctx.y,margin:{left:M,right:M},theme:'plain',styles:{fontSize:10,cellPadding:3,textColor:30},columnStyles:{0:{fontStyle:'bold',cellWidth:120}},body:rows});ctx.y=doc.lastAutoTable.finalY+18};
+  ctx.firmas=(izq)=>{if(ctx.y>660){doc.addPage();ctx.y=60}ctx.y+=44;
+    doc.setDrawColor(90);doc.line(M,ctx.y,M+210,ctx.y);doc.line(W-M-210,ctx.y,W-M,ctx.y);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(izq,M,ctx.y+13);doc.text('Jefe de inventarios / Supervisor',W-M-210,ctx.y+13)};
+  ctx.save=nombre=>{const n=doc.getNumberOfPages(),H=doc.internal.pageSize.getHeight();
+    for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(120);
+      doc.text('Frigorodeo · Inventario físico · generado '+new Date().toLocaleString('es-CO'),M,H-22);doc.text('Página '+i+' de '+n,W-M,H-22,{align:'right'})}
+    doc.save(nombre);return doc};
+  return ctx}
+const vacio=(n)=>[[{content:'Sin registros',colSpan:n,styles:{halign:'center',textColor:[120,120,120]}}]];
+const R=n=>({halign:'right'});
+function datosPunto(s){const x=snapS(s),c=x.c,i=x.i;
+  const cortes=PRODUCTS.filter(p=>c[p.r]&&c[p.r].length).map(p=>{const e=c[p.r];return {p,n:e.length,b:r2(e.reduce((a,w)=>a+w.bruto,0)),t:r2(e.reduce((a,w)=>a+w.tara,0)),k:tt(e)}});
+  return {s,c,i,cortes,kg:sumNeto(c),cn:canas(c),ins:INSUMOS.filter(p=>i[p.id]).map(p=>({p,n:i[p.id].n,u:i[p.id].u}))}}
+function secCanastillas(ctx,cn){
+  ctx.sec('Canastillas en el punto',{head:[['Tipo','Peso c/u (kg)','Unidades','Tara (kg)']],
+    body:TIPOS.map(x=>[x.n,fmt(x.kg),cn.por[x.id],fmt(r2(cn.por[x.id]*x.kg))]),foot:[['TOTAL','',cn.total,fmt(cn.tara)]],columnStyles:{1:R(),2:R(),3:R()}})}
+function secInsumos(ctx,rows){
+  ctx.sec('Insumos',{head:[['Insumo','Nuevos','En uso','Total']],body:rows.length?rows.map(r=>[r.p.n,fq(r.n),fq(r.u),fq(r.n+r.u)]):vacio(4),columnStyles:{1:R(),2:R(),3:R()}})}
+async function pdfPunto(s,inc,btn){
+  const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generando…'}
+  try{await loadPdf();
+    const d=datosPunto(s),ctx=newDoc('Inventario físico · '+pvNombre(s.pid),'Fecha del inventario: '+fmtF(s.fecha));
+    ctx.meta([['Punto de venta',pvNombre(s.pid)],['Fecha del inventario',fmtF(s.fecha)],['Encargado',s.encargado],['Inicio',dm(s.creado)],['Estado',s.cerrado?'Cerrado '+dm(s.cerrado):'Abierto'],
+      ['Total cárnico',fmt(d.kg)+' kg en '+d.cortes.length+' cortes'],['Canastillas',d.cn.total+' unidades (tara '+fmt(d.cn.tara)+' kg)'],['Insumos',d.ins.length+(d.ins.length==1?' referencia contada':' referencias contadas')]]);
+    if(inc.c)ctx.sec('Cárnico · kg netos por corte',{head:[['Cód.','Corte','Pesajes','Bruto (kg)','Tara (kg)','Neto (kg)']],
+      body:d.cortes.length?d.cortes.map(r=>[r.p.c,r.p.n,r.n,fmt(r.b),fmt(r.t),fmt(r.k)]):vacio(6),
+      foot:[['','TOTAL',d.cortes.reduce((a,r)=>a+r.n,0),fmt(r2(d.cortes.reduce((a,r)=>a+r.b,0))),fmt(r2(d.cortes.reduce((a,r)=>a+r.t,0))),fmt(d.kg)]],columnStyles:{2:R(),3:R(),4:R(),5:R()}});
+    if(inc.k)secCanastillas(ctx,d.cn);
+    if(inc.i)secInsumos(ctx,d.ins);
+    ctx.firmas('Encargado: '+s.encargado);
+    ctx.save('inventario_'+slug(pvNombre(s.pid))+'_'+s.fecha+'.pdf');return true}
+  catch(e){alert('No se pudo generar el PDF. Revisa tu conexión (se descarga la librería de PDF la primera vez).\n'+e.message);return false}
+  finally{if(btn){btn.disabled=false;btn.textContent=old}}}
+async function pdfConsolidado(F,inc,btn){
+  const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generando…'}
+  try{await loadPdf();
+    const S=sesiones.filter(s=>s.fecha===F).map(datosPunto).sort((a,b)=>pvNombre(a.s.pid).localeCompare(pvNombre(b.s.pid)));
+    const ctx=newDoc('Inventario físico · Consolidado','Fecha del inventario: '+fmtF(F)+' · '+S.length+' punto'+(S.length==1?'':'s'));
+    const totKg=r2(S.reduce((a,x)=>a+x.kg,0)),totC=S.reduce((a,x)=>a+x.cn.total,0);
+    ctx.sec('Puntos de venta',{head:[['Punto','Encargado','Estado','Cárnico (kg)','Canastillas']],
+      body:S.length?S.map(x=>[pvNombre(x.s.pid),x.s.encargado,x.s.cerrado?'Cerrado':'Abierto',fmt(x.kg),x.cn.total]):vacio(5),
+      foot:[['TOTAL','','',fmt(totKg),totC]],columnStyles:{3:R(),4:R()}});
+    if(inc.c){const rows=PRODUCTS.map(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return [p.c,p.n,per.filter(v=>v>0).length,fmt(t),t]}).filter(r=>r[4]>0);
+      ctx.sec('Cárnico · kg totales por corte (todos los puntos)',{head:[['Cód.','Corte','Puntos','Kg total']],body:rows.length?rows.map(r=>r.slice(0,4)):vacio(4),foot:[['','TOTAL','',fmt(totKg)]],columnStyles:{2:R(),3:R()}})}
+    if(inc.k){const g=TIPOS.map(x=>S.reduce((a,y)=>a+y.cn.por[x.id],0));
+      ctx.sec('Canastillas por punto',{head:[['Punto',...TIPOS.map(x=>x.n.replace('Canastilla ','').replace('Base de embutidos','B. embutidos')),'Total']],
+        body:S.length?S.map(x=>[pvNombre(x.s.pid),...TIPOS.map(k=>x.cn.por[k.id]),x.cn.total]):vacio(TIPOS.length+2),foot:[['TOTAL',...g,totC]],
+        columnStyles:Object.fromEntries(Array.from({length:TIPOS.length+1},(_,i)=>[i+1,R()]))})}
+    if(inc.i){const rows=INSUMOS.map(p=>{let n=0,u=0;S.forEach(x=>{const e=x.i[p.id];if(e){n+=e.n;u+=e.u}});return {p,n,u}}).filter(r=>r.n||r.u);secInsumos(ctx,rows)}
+    ctx.firmas('Responsable del consolidado');
+    ctx.save('inventario_consolidado_'+F+'.pdf');return true}
+  catch(e){alert('No se pudo generar el PDF. Revisa tu conexión (se descarga la librería de PDF la primera vez).\n'+e.message);return false}
+  finally{if(btn){btn.disabled=false;btn.textContent=old}}}
+
+function renderR(){
+  const S=sesiones.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||pvNombre(a.pid).localeCompare(pvNombre(b.pid)));
+  const prevS=$('rses').value,prevF=$('rfec').value;
+  $('rses').innerHTML=S.map(s=>`<option value="${s.id}">${sesLabel(s)}</option>`).join('')||'<option value="">Sin inventarios</option>';
+  $('rses').value=S.find(s=>s.id===prevS)?prevS:(sesId||(S[0]&&S[0].id)||'');
+  const fechas=[...new Set(sesiones.map(s=>s.fecha))].sort().reverse();
+  $('rfec').innerHTML=fechas.map(f=>`<option value="${f}">${fmtF(f)}</option>`).join('')||'<option value="">Sin inventarios</option>';
+  $('rfec').value=fechas.includes(prevF)?prevF:(fecha&&fechas.includes(fecha)?fecha:fechas[0]||'');
+  const a=$('rtipo').value==='a';$('rp').style.display=a?'none':'';$('ra').style.display=a?'':'none';
+  let txt='',ok=false;
+  if(a&&$('rfec').value){const X=sesiones.filter(s=>s.fecha===$('rfec').value).map(datosPunto);ok=X.length>0;
+    txt=`<b>${fmtF($('rfec').value)}</b><br>${X.length} punto${X.length==1?'':'s'} · ${fmt(r2(X.reduce((q,x)=>q+x.kg,0)))} kg cárnico · ${X.reduce((q,x)=>q+x.cn.total,0)} canastillas · ${X.reduce((q,x)=>q+x.ins.length,0)} conteos de insumos`}
+  else if(!a&&$('rses').value){const s=sesiones.find(x=>x.id===$('rses').value);if(s){const d=datosPunto(s);ok=true;
+    txt=`<b>${pvNombre(s.pid)} · ${fmtF(s.fecha)}</b><br>Encargado: ${s.encargado} · ${s.cerrado?'cerrado':'abierto'}<br>${d.cortes.length} cortes · ${fmt(d.kg)} kg · ${d.cn.total} canastillas · ${d.ins.length} insumos`}}
+  $('rprev').innerHTML=txt||'Aún no hay inventarios para reportar.';
+  $('rgen').disabled=!ok||!($('rc').checked||$('rk').checked||$('ri').checked)}
+['rtipo','rses','rfec','rc','rk','ri'].forEach(id=>$(id).onchange=renderR);
+$('rgen').onclick=async()=>{const inc={c:$('rc').checked,k:$('rk').checked,i:$('ri').checked};
+  const ok=$('rtipo').value==='a'?await pdfConsolidado($('rfec').value,inc,$('rgen')):await pdfPunto(sesiones.find(x=>x.id===$('rses').value),inc,$('rgen'));
+  if(ok){$('rmsg').textContent='✓ PDF generado y descargado';setTimeout(()=>$('rmsg').textContent='',5000)}};
 
 /* Escape cierra la capa superior */
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
