@@ -130,6 +130,12 @@ body.closed .mini .bt{display:none}
 .chk{display:grid;gap:4px}.chk label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px}.chk input{width:20px;height:20px}
 .rsel{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px;min-height:44px}
 .rprev{margin-top:14px;font-size:14px;line-height:1.6}
+/* ---- borradores ---- */
+.bor .bt{display:flex;gap:6px}.bor .bt button{min-height:44px;padding:6px 12px}.bor .bt button.dl{color:var(--red)}
+.bor .item{border-style:dashed}
+.bor h2{margin-top:18px}
+body.closed #bsave,body.closed #bsavei,body.closed .bor .bt{display:none}
+#bsave,#bsavei{margin-top:8px;width:100%}
 /* ---- UX pass: accesibilidad, toque, movimiento ---- */
 :root{--mut:#6a645d}
 @media (prefers-color-scheme:dark){:root{--mut:#a9a299}}
@@ -213,12 +219,14 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
       </div>
       <div class="warn" id="warn" role="alert">La tara de las canastillas supera el peso. Revisa el peso o quita canastillas.</div>
       <button class="pri" id="add" disabled>Agregar pesaje</button>
+      <button class="add2" id="bsave" style="display:none" disabled>Guardar borrador y seguir después</button>
       <button class="add2" id="fin" style="display:none">Terminar este corte</button>
       <button class="add2" id="canc" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
+  <div class="bor" id="borc"></div>
   <h2><span>Productos en el inventario</span><span id="cntp"></span></h2>
   <div id="list"></div>
 </main>
@@ -237,11 +245,13 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
       </div>
       <div class="calc"><div class="net"><span>Total</span><span id="tt">0</span></div></div>
       <button class="pri" id="savei" disabled>Guardar insumo</button>
+      <button class="add2" id="bsavei" disabled>Guardar borrador y seguir después</button>
       <button class="add2" id="cancei" style="display:none;margin-top:8px;width:100%">Cancelar edición</button>
       <button class="add2" id="delei" style="display:none;margin-top:8px;width:100%;color:var(--red)">Borrar este insumo</button>
     </div>
     <div class="toast" id="toasti" role="status" aria-live="polite"></div>
   </div>
+  <div class="bor" id="bori"></div>
   <h2><span>Insumos registrados</span><span id="cnti"></span></h2>
   <div id="listi"></div>
   <div class="acts"><button id="expi">CSV insumos</button><button id="rsti">Borrar insumos</button></div>
@@ -345,13 +355,16 @@ let sesId=rd(CK,null); if(!sesiones.find(s=>s.id===sesId))sesId=null;
 let pvId=null,fecha=null,KEY='',KEYI='';
 let data={}; // r -> [{bruto,tara,neto,det,t}]  (del inventario actual)
 let ins={};  // id -> {n,u,t}                    (del inventario actual)
+const BK='frigorodeo_bor_v1',BDEF=()=>({c:[],i:[],act:null,acti:null});
+let bor=BDEF(); // borradores del inventario actual: c/i = guardados a mano, act/acti = formulario en curso
+const saveB=()=>{if(sesId)wr(BK+':'+sesId,bor)};
 const save=()=>{if(KEY)wr(KEY,data)};
 const ses=()=>sesiones.find(s=>s.id===sesId);
 const abierto=()=>sesiones.find(s=>!s.cerrado);
 const cerrado=()=>!!(ses()&&ses().cerrado);
 function loadPv(){const s=ses();
-  if(!s){KEY=KEYI='';data={};ins={};pvId=fecha=null;return}
-  pvId=s.pid;fecha=s.fecha;KEY=LK+':'+s.id;KEYI=LKI+':'+s.id;data=rd(KEY,{});ins=rd(KEYI,{})}
+  if(!s){KEY=KEYI='';data={};ins={};bor=BDEF();pvId=fecha=null;return}
+  pvId=s.pid;fecha=s.fecha;KEY=LK+':'+s.id;KEYI=LKI+':'+s.id;data=rd(KEY,{});ins=rd(KEYI,{});bor={...BDEF(),...rd(BK+':'+s.id,{})}}
 const pvNombre=id=>(puntos.find(p=>p.id===id)||{nombre:'—'}).nombre;
 const slug=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const fmtF=f=>new Date(f+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'});
@@ -396,12 +409,12 @@ function pick(p,idx){
   const ed=idx!=null&&(data[p.r]||[])[idx];
   if(ed){editing={r:p.r,i:idx};cnt={...ed.det};$('peso').value=ed.bruto}
   $('chg').style.display=ed?'none':'';$('edbar').classList.toggle('on',!!ed);$('canc').style.display=ed?'':'none';
-  $('add').textContent=ed?'Guardar cambios':'Agregar pesaje';$('fin').style.display=ed?'none':'';
+  $('add').textContent=ed?'Guardar cambios':'Agregar pesaje';$('fin').style.display=ed?'none':'';$('bsave').style.display=ed?'none':'';
   drawTipos(); recalc(); drawMini();
   setTimeout(()=>$('peso').focus(),30);
 }
 function reset(){
-  cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar pesaje'; $('fin').style.display='none'; $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
+  cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar pesaje'; $('fin').style.display='none'; $('bsave').style.display='none'; bor.act=null; saveB(); $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
   $('step2').style.display='none'; hi=0; drawMini();
 }
 $('q').onfocus=()=>{hi=0;drawDD()};
@@ -423,7 +436,28 @@ function recalc(){
   $('cb2').textContent=fmt(b);$('ct').textContent='− '+fmt(t);
   $('cn').textContent=fmt(n)+' kg';$('cn').classList.toggle('neg',n<0);
   $('add').disabled=!(cur&&b>0&&n>=0);$('warn').classList.toggle('on',b>0&&n<0);
+  const has=b>0||Object.values(cnt).some(v=>v>0);
+  $('bsave').disabled=!(cur&&!editing&&has);
+  if(cur&&!editing&&!cerrado()){bor.act=has?{r:cur.r,peso:$('peso').value,cnt:{...cnt}}:null;saveB()}   // recupera el formulario si se recarga la página
 }
+const hasForm=()=>cur&&!editing&&(parseFloat($('peso').value)>0||Object.values(cnt).some(v=>v>0));
+const descCnt=c=>TIPOS.filter(k=>c[k.id]).map(k=>c[k.id]+'× '+k.n.replace('Canastilla ','').toLowerCase()).join(', ')||'sin canastilla';
+function parkCurrent(){if(hasForm())bor.c.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),r:cur.r,peso:$('peso').value,cnt:{...cnt},t:Date.now()})}
+function drawBorC(){const L=bor.c;
+  $('borc').innerHTML=L.length?`<h2><span>Borradores pendientes (${L.length})</span><span style="font-size:12px;font-weight:400">no suman hasta confirmarlos</span></h2>`+
+    L.map(d=>{const p=PRODUCTS.find(x=>x.r==d.r);if(!p)return '';
+      return `<div class="item"><div class="ih" style="cursor:default"><div class="nm"><b>${p.n}</b><small>${fmt(parseFloat(d.peso)||0)} kg bruto · ${descCnt(d.cnt)} · ${hm(d.t)}</small></div><div class="bt"><button data-bcont="${d.id}">Continuar</button><button class="dl" data-bdel="${d.id}" aria-label="Descartar borrador de ${p.n}">Descartar</button></div></div></div>`}).join(''):''}
+$('bsave').onclick=()=>{if(!hasForm())return;const n=cur.n;parkCurrent();reset();bor.act=null;saveB();drawBorC();
+  const m='✓ Borrador guardado: '+n+'. Lo retomas abajo en "Borradores pendientes".';$('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},5000);$('q').focus()};
+$('borc').onclick=e=>{if(cerrado())return;
+  const c=e.target.closest('[data-bcont]'),d=e.target.closest('[data-bdel]');
+  if(c){const i=bor.c.findIndex(x=>x.id===c.dataset.bcont);if(i<0)return;const dr=bor.c.splice(i,1)[0],p=PRODUCTS.find(x=>x.r==dr.r);
+    parkCurrent();saveB();pick(p);cnt={...dr.cnt};$('peso').value=dr.peso;drawTipos();recalc();drawBorC();window.scrollTo({top:0,behavior:'smooth'})}
+  if(d){const x=bor.c.find(y=>y.id===d.dataset.bdel);if(!x)return;const p=PRODUCTS.find(y=>y.r==x.r);
+    ask('¿Descartar este borrador?',p.n+' · '+fmt(parseFloat(x.peso)||0)+' kg bruto',{ok:'Descartar'}).then(ok=>{if(ok){bor.c=bor.c.filter(y=>y.id!==x.id);saveB();drawBorC()}})}};
+function restoreAct(){const a=bor.act;if(!a||cerrado()||!ses())return;const p=PRODUCTS.find(x=>x.r==a.r);if(!p)return;
+  pick(p);cnt={...a.cnt};$('peso').value=a.peso;drawTipos();recalc();
+  const m='Se recuperó el pesaje que estabas llenando: '+p.n;$('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},6000)}
 function drawTipos(){
   $('tipos').innerHTML=TIPOS.map(t=>`<div class="tipo ${cnt[t.id]?'act':''}">
     <div class="t"><b>${t.n}</b><small>${String(t.kg).replace('.',',')} kg c/u</small></div>
@@ -474,6 +508,7 @@ $('canc').onclick=()=>{reset()};
 const describe=x=>TIPOS.filter(t=>x.det[t.id]).map(t=>x.det[t.id]+'× '+t.n.replace('Canastilla ','').toLowerCase()).join(', ')||'sin canastilla';
 let openR=null;
 function render(){
+  drawBorC();
   const rows=registered();
   $('grand').textContent=fmt(grand())+' kg'; $('cntp').textContent=rows.length+' producto'+(rows.length==1?'':'s');
   $('list').innerHTML=rows.length?rows.map(p=>{const e=data[p.r];
@@ -548,13 +583,32 @@ function drawDDI(){ishown=matchesI();ihi=Math.min(ihi,Math.max(0,ishown.length-1
   $('ddi').innerHTML=ishown.length?ishown.map((p,i)=>`<div class="opt ${i==ihi?'sel':''}" role="option" aria-selected="${i==ihi}" data-i="${i}"><span>${p.n}</span>${ins[p.id]?`<span class="hv">${fq(ins[p.id].n+ins[p.id].u)} und</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
   $('ddi').classList.add('open');$('qi').setAttribute('aria-expanded','true');const s=$('ddi').querySelector('.sel');if(s)s.scrollIntoView({block:'nearest'})}
 const closeDDI=()=>{$('ddi').classList.remove('open');$('qi').setAttribute('aria-expanded','false')};
-function resetI(){iCur=null;iEdit=false;$('qi').value='';$('qi').style.display='';$('pickedi').classList.remove('on');$('stepi').style.display='none';$('cancei').style.display='none';$('delei').style.display='none';$('chgi').style.display='';$('savei').textContent='Guardar insumo';ihi=0}
+function resetI(){iCur=null;iEdit=false;bor.acti=null;saveB();$('bsavei').disabled=true;$('qi').value='';$('qi').style.display='';$('pickedi').classList.remove('on');$('stepi').style.display='none';$('cancei').style.display='none';$('delei').style.display='none';$('chgi').style.display='';$('savei').textContent='Guardar insumo';ihi=0}
 function pickI(p){if(!ses()||cerrado())return;iCur=p;closeDDI();const e=ins[p.id];iEdit=!!e;
   $('qi').style.display='none';$('pickedi').classList.add('on');$('pni').textContent=p.n;$('pci').textContent=e?'Ya registrado: se reemplazan los valores':'';
   $('stepi').style.display='block';$('nu').value=e?e.n:'';$('us').value=e?e.u:'';
   $('cancei').style.display=e?'':'none';$('delei').style.display=e?'':'none';$('savei').textContent=e?'Guardar cambios':'Guardar insumo';recalcI();setTimeout(()=>$('nu').focus(),30)}
 function recalcI(){$('tt').textContent=fq(num($('nu').value)+num($('us').value));
-  $('savei').disabled=!(iCur&&($('nu').value!==''||$('us').value!==''))}
+  const has=$('nu').value!==''||$('us').value!=='';
+  $('savei').disabled=!(iCur&&has);$('bsavei').disabled=!(iCur&&!iEdit&&has);
+  if(iCur&&!iEdit&&!cerrado()){bor.acti=has?{id:iCur.id,nu:$('nu').value,us:$('us').value}:null;saveB()}}
+const hasFormI=()=>iCur&&!iEdit&&($('nu').value!==''||$('us').value!=='');
+function parkCurrentI(){if(hasFormI())bor.i.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),iid:iCur.id,nu:$('nu').value,us:$('us').value,t:Date.now()})}
+function drawBorI(){const L=bor.i;
+  $('bori').innerHTML=L.length?`<h2><span>Borradores pendientes (${L.length})</span><span style="font-size:12px;font-weight:400">no suman hasta confirmarlos</span></h2>`+
+    L.map(d=>{const p=INSUMOS.find(x=>x.id===d.iid);if(!p)return '';
+      return `<div class="item"><div class="ih" style="cursor:default"><div class="nm"><b>${p.n}</b><small>${d.nu===''?'—':fq(num(d.nu))} nuevos · ${d.us===''?'—':fq(num(d.us))} en uso · ${hm(d.t)}</small></div><div class="bt"><button data-bcont="${d.id}">Continuar</button><button class="dl" data-bdel="${d.id}" aria-label="Descartar borrador de ${p.n}">Descartar</button></div></div></div>`}).join(''):''}
+$('bsavei').onclick=()=>{if(!hasFormI())return;const n=iCur.n;parkCurrentI();resetI();saveB();drawBorI();
+  const m='✓ Borrador guardado: '+n;$('toasti').textContent=m;setTimeout(()=>{if($('toasti').textContent===m)$('toasti').textContent=''},5000);$('qi').focus()};
+$('bori').onclick=e=>{if(cerrado())return;
+  const c=e.target.closest('[data-bcont]'),d=e.target.closest('[data-bdel]');
+  if(c){const i=bor.i.findIndex(x=>x.id===c.dataset.bcont);if(i<0)return;const dr=bor.i.splice(i,1)[0],p=INSUMOS.find(x=>x.id===dr.iid);
+    parkCurrentI();saveB();pickI(p);$('nu').value=dr.nu;$('us').value=dr.us;recalcI();drawBorI();window.scrollTo({top:0,behavior:'smooth'})}
+  if(d){const x=bor.i.find(y=>y.id===d.dataset.bdel);if(!x)return;const p=INSUMOS.find(y=>y.id===x.iid);
+    ask('¿Descartar este borrador?',p.n,{ok:'Descartar'}).then(ok=>{if(ok){bor.i=bor.i.filter(y=>y.id!==x.id);saveB();drawBorI()}})}};
+function restoreActI(){const a=bor.acti;if(!a||cerrado()||!ses())return;const p=INSUMOS.find(x=>x.id===a.id);if(!p)return;
+  pickI(p);$('nu').value=a.nu;$('us').value=a.us;recalcI();
+  const m='Se recuperó el conteo que estabas llenando: '+p.n;$('toasti').textContent=m;setTimeout(()=>{if($('toasti').textContent===m)$('toasti').textContent=''},6000)}
 $('qi').onfocus=()=>{ihi=0;drawDDI()};$('qi').oninput=()=>{ihi=0;drawDDI()};
 $('qi').onkeydown=e=>{if(e.key==='ArrowDown'){ihi=Math.min(ihi+1,ishown.length-1);drawDDI();e.preventDefault()}
   else if(e.key==='ArrowUp'){ihi=Math.max(ihi-1,0);drawDDI();e.preventDefault()}
@@ -568,7 +622,8 @@ $('us').onkeydown=$('nu').onkeydown=e=>{if(e.key==='Enter'&&!$('savei').disabled
 $('savei').onclick=()=>{const was=iEdit,p=iCur;ins[p.id]={n:num($('nu').value),u:num($('us').value),t:Date.now()};saveI();
   const msg=`✓ ${p.n}: ${fq(ins[p.id].n)} nuevos + ${fq(ins[p.id].u)} en uso = ${fq(ins[p.id].n+ins[p.id].u)}`;
   resetI();renderI();$('toasti').textContent=msg;setTimeout(()=>{if($('toasti').textContent===msg)$('toasti').textContent=''},4000);$('qi').focus()};
-function renderI(){const rows=INSUMOS.filter(p=>ins[p.id]);$('cnti').textContent=rows.length+' insumo'+(rows.length==1?'':'s');
+function renderI(){
+  drawBorI();const rows=INSUMOS.filter(p=>ins[p.id]);$('cnti').textContent=rows.length+' insumo'+(rows.length==1?'':'s');
   $('listi').innerHTML=rows.length?'<div class="item">'+rows.map(p=>{const e=ins[p.id];return `<div class="irow" data-id="${p.id}" style="border-bottom:1px solid var(--line)"><div class="nm"><b>${p.n}</b><small>${e.t?dm(e.t)+' · ':''}Toca para editar</small></div>
     <div class="v"><small>Nuevos</small><b>${fq(e.n)}</b></div><div class="v"><small>En uso</small><b>${fq(e.u)}</b></div><div class="v"><small>Total</small><b>${fq(e.n+e.u)}</b></div></div>`}).join('')+'</div>':'<div class="empty">Aún no hay insumos registrados.</div>'}
 $('listi').onclick=e=>{const r=e.target.closest('.irow');if(!r)return;pickI(INSUMOS[+r.dataset.id]);window.scrollTo({top:0,behavior:'smooth'})};
@@ -607,13 +662,15 @@ function updateUI(){
   document.body.classList.toggle('closed',cerrado());
 }
 function switchSes(id){
-  wr(CK,id);sesId=id;loadPv();reset();resetI();openR=null;updateUI();render();renderI();
+  wr(CK,id);sesId=id;loadPv();const ka=bor.act,ki=bor.acti;reset();resetI();bor.act=ka;bor.acti=ki;saveB();openR=null;updateUI();render();renderI();
+  restoreAct();restoreActI();
   if(view==='a')renderA()}
 $('sesel').onchange=()=>{switchSes($('sesel').value);openSide(false)};
 $('closeinv').onclick=()=>{const s=ses();if(!s)return;
   if(s.cerrado){const ab=abierto();if(ab){ask('No se puede reabrir','Ya hay un inventario abierto ('+pvNombre(ab.pid)+' · '+fmtF(ab.fecha)+'). Ciérralo primero: no se pueden hacer dos a la vez.',{ok:'Entendido',single:true});return}
     ask('¿Reabrir el inventario?',sesLabel(s),{ok:'Reabrir'}).then(ok=>{if(ok){s.cerrado=null;wr(SK,sesiones);updateUI();render();renderI()}});return}
-  ask('¿Cerrar el inventario?','Queda en solo lectura y se registra la hora de cierre. Podrás reabrirlo. '+pvNombre(s.pid)+' · '+fmtF(s.fecha),{ok:'Cerrar inventario'}).then(ok=>{
+  const np=bor.c.length+bor.i.length+(hasForm()?1:0)+(hasFormI()?1:0);
+  ask('¿Cerrar el inventario?','Queda en solo lectura y se registra la hora de cierre. Podrás reabrirlo. '+pvNombre(s.pid)+' · '+fmtF(s.fecha)+(np?' ⚠ Hay '+np+' borrador'+(np==1?'':'es')+' sin confirmar que NO se incluirán en el reporte.':''),{ok:np?'Cerrar de todos modos':'Cerrar inventario'}).then(ok=>{
     if(ok){s.cerrado=new Date().toISOString();wr(SK,sesiones);reset();resetI();updateUI();render();renderI();openSide(false);go('c');$('sum').click()}})};
 
 
@@ -810,7 +867,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
   if($('side').classList.contains('open')){openSide(false);$('burger').focus()}});
 /* arranque */
 updateUI();
-if(!sesiones.length)openNew();else go('c');
+if(!sesiones.length)openNew();else{go('c');restoreAct();restoreActI()}
 </script>
 </body>
 </html>
