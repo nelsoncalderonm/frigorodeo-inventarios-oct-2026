@@ -136,6 +136,9 @@ body.closed .mini .bt{display:none}
 .bor h2{margin-top:18px}
 body.closed #bsave,body.closed #bsavei,body.closed .bor .bt{display:none}
 #bsave,#bsavei{margin-top:8px;width:100%}
+/* ---- productos por unidad ---- */
+#step2.u .kg-only{display:none!important}
+#step2:not(.u) .u-only{display:none}
 /* ---- UX pass: accesibilidad, toque, movimiento ---- */
 :root{--mut:#6a645d}
 @media (prefers-color-scheme:dark){:root{--mut:#a9a299}}
@@ -207,17 +210,20 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
 
     <div class="mini" id="mini"></div>
     <div id="step2" style="display:none">
-      <label class="l" for="peso">2. Peso en la balanza (kg)</label>
-      <input type="number" id="peso" class="bigin" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
-      <div class="l" id="lt" style="margin:14px 0 6px;font-size:13px;color:var(--mut)">3. ¿Qué canastillas / base tenía?</div>
-      <div class="tipos" id="tipos" role="group" aria-labelledby="lt"></div>
-      <div class="hint" style="margin-top:6px">Sin canastilla: deja todo en 0.</div>
-      <div class="calc">
+      <div class="u-only"><label class="l" for="cant">2. Cantidad (unidades)</label>
+        <input type="number" id="cant" class="bigin" inputmode="numeric" step="1" min="0" placeholder="0">
+        <div class="calc"><div class="net"><span>Se cuenta por unidad</span><span id="cu">0 und</span></div></div></div>
+      <label class="l kg-only" for="peso">2. Peso en la balanza (kg)</label>
+      <input type="number" id="peso" class="bigin kg-only" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+      <div class="l kg-only" id="lt" style="margin:14px 0 6px;font-size:13px;color:var(--mut)">3. ¿Qué canastillas / base tenía?</div>
+      <div class="tipos kg-only" id="tipos" role="group" aria-labelledby="lt"></div>
+      <div class="hint kg-only" style="margin-top:6px">Sin canastilla: deja todo en 0.</div>
+      <div class="calc kg-only">
         <div><span>Peso bruto</span><span id="cb2">0,00</span></div>
         <div><span>Tara</span><span id="ct">− 0,00</span></div>
         <div class="net"><span>Neto</span><span id="cn">0,00 kg</span></div>
       </div>
-      <div class="warn" id="warn" role="alert">La tara de las canastillas supera el peso. Revisa el peso o quita canastillas.</div>
+      <div class="warn kg-only" id="warn" role="alert">La tara de las canastillas supera el peso. Revisa el peso o quita canastillas.</div>
       <button class="pri" id="add" disabled>Agregar pesaje</button>
       <button class="add2" id="bsave" style="display:none" disabled>Guardar borrador y seguir después</button>
       <button class="add2" id="fin" style="display:none">Terminar este corte</button>
@@ -297,6 +303,13 @@ header{padding-top:calc(12px + env(safe-area-inset-top))}
     <div id="pvlist"></div>
     <label class="l" for="npn">Agregar punto de venta</label>
     <div class="pvrow" style="border:0;padding:0"><input type="text" id="npn" placeholder="Nombre" aria-label="Nombre del punto"><input type="text" id="npc" placeholder="Ciudad" aria-label="Ciudad del punto"><button class="pri" id="npa" style="padding:10px 14px">Agregar</button></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 4px">Productos que se cuentan por unidad</h3>
+    <div class="sub">En vez de kg se registra la cantidad de unidades, sin canastillas. Busca un producto para marcarlo o desmarcarlo.</div>
+    <label class="l" for="qu">Buscar producto</label>
+    <input type="search" id="qu" placeholder="Código o nombre…">
+    <div class="tbl" id="ulist" style="max-height:44vh;margin-top:10px"></div>
   </div>
   <div class="card" style="margin-top:12px">
     <h3 style="margin:0 0 4px">Roles</h3>
@@ -381,6 +394,19 @@ function ask(msg,sub,o){o=o||{};return new Promise(res=>{
 })}
 const tot=r=>r2((data[r]||[]).reduce((s,e)=>s+e.neto,0));
 const grand=()=>r2(PRODUCTS.reduce((s,p)=>s+tot(p.r),0));
+// productos que se cuentan por unidad (no por kg): menudencia, mollejas, manteca, grasa natural, combos…
+const UNDK='frigorodeo_und_v1',UND_DEF=[265,266,267,268,269,270,271,272,273,274,275];
+let UND=new Set(rd(UNDK,UND_DEF));
+const isU=r=>UND.has(+r);
+const uOf=e=>e?e.reduce((s,x)=>s+(x.und||0),0):0;
+const und=r=>uOf(data[r]);
+const qv=(r,e)=>isU(r)?uOf(e):r2((e||[]).reduce((s,x)=>s+x.neto,0));   // cantidad según el tipo del producto
+const fv=(r,v)=>isU(r)?v+' und':fmt(v)+' kg';
+const fQ=r=>fv(r,qv(r,data[r]));
+const fe=x=>x.und!=null?x.und+' und':fmt(x.neto)+' kg';
+const sumUnd=c=>Object.keys(c).reduce((s,r)=>s+(isU(r)?uOf(c[r]):0),0);
+const grandU=()=>sumUnd(data);
+const fTot=(kg,u)=>[kg||!u?fmt(kg)+' kg':'',u?u+' und':''].filter(Boolean).join(' + ');
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 const registered=()=>PRODUCTS.filter(p=>(data[p.r]||[]).length);
 let cur=null, cnt={}, hi=0, shown=[], editing=null;
@@ -395,7 +421,7 @@ function matches(){
 }
 function drawDD(){
   shown=matches(); hi=Math.min(hi,Math.max(0,shown.length-1));
-  $('dd').innerHTML=shown.length?shown.map((p,i)=>`<div class="opt ${i==hi?'sel':''}" role="option" aria-selected="${i==hi}" data-i="${i}"><span class="c">${p.c}</span><span>${p.n}</span>${(data[p.r]||[]).length?`<span class="hv">${fmt(tot(p.r))} kg</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
+  $('dd').innerHTML=shown.length?shown.map((p,i)=>`<div class="opt ${i==hi?'sel':''}" role="option" aria-selected="${i==hi}" data-i="${i}"><span class="c">${p.c}</span><span>${p.n}</span>${(data[p.r]||[]).length?`<span class="hv">${fQ(p.r)}</span>`:''}</div>`).join(''):'<div class="empty">No hay coincidencias</div>';
   $('dd').classList.add('open');$('q').setAttribute('aria-expanded','true');
   const s=$('dd').querySelector('.sel'); if(s)s.scrollIntoView({block:'nearest'});
 }
@@ -405,13 +431,13 @@ function pick(p,idx){
   cur=p; cnt={}; closeDD(); editing=null;
   $('q').style.display='none'; $('picked').classList.add('on');
   $('pn').textContent=p.n; $('pc').textContent=pcText();
-  $('step2').style.display='block'; $('peso').value=''; 
+  $('step2').style.display='block'; $('peso').value=''; $('cant').value=''; $('step2').classList.toggle('u',isU(p.r));
   const ed=idx!=null&&(data[p.r]||[])[idx];
-  if(ed){editing={r:p.r,i:idx};cnt={...ed.det};$('peso').value=ed.bruto}
+  if(ed){editing={r:p.r,i:idx};if(ed.und!=null)$('cant').value=ed.und;else{cnt={...ed.det};$('peso').value=ed.bruto}}
   $('chg').style.display=ed?'none':'';$('edbar').classList.toggle('on',!!ed);$('canc').style.display=ed?'':'none';
   $('add').textContent=ed?'Guardar cambios':'Agregar pesaje';$('fin').style.display=ed?'none':'';$('bsave').style.display=ed?'none':'';
   drawTipos(); recalc(); drawMini();
-  setTimeout(()=>$('peso').focus(),30);
+  setTimeout(()=>($('step2').classList.contains('u')?$('cant'):$('peso')).focus(),30);
 }
 function reset(){
   cur=null; cnt={}; editing=null; $('edbar').classList.remove('on'); $('canc').style.display='none'; $('add').textContent='Agregar pesaje'; $('fin').style.display='none'; $('bsave').style.display='none'; bor.act=null; saveB(); $('chg').style.display=''; $('q').value=''; $('q').style.display=''; $('picked').classList.remove('on');
@@ -432,6 +458,11 @@ $('chg').onclick=()=>{reset();$('q').focus()};
 /* ---- peso / tara ---- */
 const tara=()=>r2(TIPOS.reduce((s,t)=>s+t.kg*(cnt[t.id]||0),0));
 function recalc(){
+  if(cur&&isU(cur.r)){   // producto por unidad: solo cantidad
+    const n=parseInt($('cant').value)||0;$('cu').textContent=n+' und';
+    $('add').disabled=!(n>0);$('bsave').disabled=!(!editing&&n>0);
+    if(!editing&&!cerrado()){bor.act=n>0?{r:cur.r,und:$('cant').value}:null;saveB()}
+    return}
   const b=parseFloat($('peso').value)||0,t=tara(),n=r2(b-t);
   $('cb2').textContent=fmt(b);$('ct').textContent='− '+fmt(t);
   $('cn').textContent=fmt(n)+' kg';$('cn').classList.toggle('neg',n<0);
@@ -440,23 +471,23 @@ function recalc(){
   $('bsave').disabled=!(cur&&!editing&&has);
   if(cur&&!editing&&!cerrado()){bor.act=has?{r:cur.r,peso:$('peso').value,cnt:{...cnt}}:null;saveB()}   // recupera el formulario si se recarga la página
 }
-const hasForm=()=>cur&&!editing&&(parseFloat($('peso').value)>0||Object.values(cnt).some(v=>v>0));
+const hasForm=()=>cur&&!editing&&(isU(cur.r)?parseInt($('cant').value)>0:(parseFloat($('peso').value)>0||Object.values(cnt).some(v=>v>0)));
 const descCnt=c=>TIPOS.filter(k=>c[k.id]).map(k=>c[k.id]+'× '+k.n.replace('Canastilla ','').toLowerCase()).join(', ')||'sin canastilla';
-function parkCurrent(){if(hasForm())bor.c.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),r:cur.r,peso:$('peso').value,cnt:{...cnt},t:Date.now()})}
+function parkCurrent(){if(hasForm())bor.c.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),r:cur.r,...(isU(cur.r)?{und:$('cant').value}:{peso:$('peso').value,cnt:{...cnt}}),t:Date.now()})}
 function drawBorC(){const L=bor.c;
   $('borc').innerHTML=L.length?`<h2><span>Borradores pendientes (${L.length})</span><span style="font-size:12px;font-weight:400">no suman hasta confirmarlos</span></h2>`+
     L.map(d=>{const p=PRODUCTS.find(x=>x.r==d.r);if(!p)return '';
-      return `<div class="item"><div class="ih" style="cursor:default"><div class="nm"><b>${p.n}</b><small>${fmt(parseFloat(d.peso)||0)} kg bruto · ${descCnt(d.cnt)} · ${hm(d.t)}</small></div><div class="bt"><button data-bcont="${d.id}">Continuar</button><button class="dl" data-bdel="${d.id}" aria-label="Descartar borrador de ${p.n}">Descartar</button></div></div></div>`}).join(''):''}
+      return `<div class="item"><div class="ih" style="cursor:default"><div class="nm"><b>${p.n}</b><small>${d.und!=null?d.und+' und':fmt(parseFloat(d.peso)||0)+' kg bruto · '+descCnt(d.cnt)} · ${hm(d.t)}</small></div><div class="bt"><button data-bcont="${d.id}">Continuar</button><button class="dl" data-bdel="${d.id}" aria-label="Descartar borrador de ${p.n}">Descartar</button></div></div></div>`}).join(''):''}
 $('bsave').onclick=()=>{if(!hasForm())return;const n=cur.n;parkCurrent();reset();bor.act=null;saveB();drawBorC();
   const m='✓ Borrador guardado: '+n+'. Lo retomas abajo en "Borradores pendientes".';$('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},5000);$('q').focus()};
 $('borc').onclick=e=>{if(cerrado())return;
   const c=e.target.closest('[data-bcont]'),d=e.target.closest('[data-bdel]');
   if(c){const i=bor.c.findIndex(x=>x.id===c.dataset.bcont);if(i<0)return;const dr=bor.c.splice(i,1)[0],p=PRODUCTS.find(x=>x.r==dr.r);
-    parkCurrent();saveB();pick(p);cnt={...dr.cnt};$('peso').value=dr.peso;drawTipos();recalc();drawBorC();window.scrollTo({top:0,behavior:'smooth'})}
+    parkCurrent();saveB();pick(p);if(dr.und!=null)$('cant').value=dr.und;else{cnt={...dr.cnt};$('peso').value=dr.peso;drawTipos()}recalc();drawBorC();window.scrollTo({top:0,behavior:'smooth'})}
   if(d){const x=bor.c.find(y=>y.id===d.dataset.bdel);if(!x)return;const p=PRODUCTS.find(y=>y.r==x.r);
-    ask('¿Descartar este borrador?',p.n+' · '+fmt(parseFloat(x.peso)||0)+' kg bruto',{ok:'Descartar'}).then(ok=>{if(ok){bor.c=bor.c.filter(y=>y.id!==x.id);saveB();drawBorC()}})}};
+    ask('¿Descartar este borrador?',p.n+' · '+(x.und!=null?x.und+' und':fmt(parseFloat(x.peso)||0)+' kg bruto'),{ok:'Descartar'}).then(ok=>{if(ok){bor.c=bor.c.filter(y=>y.id!==x.id);saveB();drawBorC()}})}};
 function restoreAct(){const a=bor.act;if(!a||cerrado()||!ses())return;const p=PRODUCTS.find(x=>x.r==a.r);if(!p)return;
-  pick(p);cnt={...a.cnt};$('peso').value=a.peso;drawTipos();recalc();
+  pick(p);if(a.und!=null)$('cant').value=a.und;else{cnt={...a.cnt};$('peso').value=a.peso;drawTipos()}recalc();
   const m='Se recuperó el pesaje que estabas llenando: '+p.n;$('toast').textContent=m;setTimeout(()=>{if($('toast').textContent===m)$('toast').textContent=''},6000)}
 function drawTipos(){
   $('tipos').innerHTML=TIPOS.map(t=>`<div class="tipo ${cnt[t.id]?'act':''}">
@@ -465,42 +496,42 @@ function drawTipos(){
 }
 $('tipos').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;
   cnt[b.dataset.t]=Math.max(0,(cnt[b.dataset.t]||0)+ +b.dataset.d);drawTipos();recalc()};
-$('peso').oninput=recalc;
+$('peso').oninput=recalc;$('cant').oninput=recalc;$('cant').onkeydown=e=>{if(e.key==='Enter'&&!$('add').disabled)$('add').click()};
 $('peso').onkeydown=e=>{if(e.key==='Enter'&&!$('add').disabled)$('add').click()};
-const pcText=()=>cur?'Cód. '+cur.c+((data[cur.r]||[]).length?' · lleva '+fmt(tot(cur.r))+' kg':''):'';
+const pcText=()=>cur?'Cód. '+cur.c+((data[cur.r]||[]).length?' · lleva '+fQ(cur.r):''):'';
 function drawMini(){
   const e=cur?(data[cur.r]||[]):[];
   if(!cur||!e.length){$('mini').style.display='none';$('mini').innerHTML='';return}
   $('mini').style.display='block';
-  $('mini').innerHTML=`<div class="mh"><b>Pesajes de este corte (${e.length})</b><b>${fmt(tot(cur.r))} kg</b></div>`+
-    e.map((x,i)=>`<div class="mr ${editing&&editing.i===i?'ed':''}"><span>${i+1}.</span><span>${fmt(x.neto)} kg<small>${fmt(x.bruto)} − ${fmt(x.tara)}</small></span><span class="bt"><button data-medit="${i}" aria-label="Editar pesaje ${i+1}">Editar</button><button class="dl" data-mdel="${i}" aria-label="Quitar pesaje ${i+1}">Quitar</button></span></div>`).join('');
+  $('mini').innerHTML=`<div class="mh"><b>Pesajes de este corte (${e.length})</b><b>${fQ(cur.r)}</b></div>`+
+    e.map((x,i)=>`<div class="mr ${editing&&editing.i===i?'ed':''}"><span>${i+1}.</span><span>${x.und!=null?x.und+' und':fmt(x.neto)+' kg<small>'+fmt(x.bruto)+' − '+fmt(x.tara)+'</small>'}</span><span class="bt"><button data-medit="${i}" aria-label="Editar pesaje ${i+1}">Editar</button><button class="dl" data-mdel="${i}" aria-label="Quitar pesaje ${i+1}">Quitar</button></span></div>`).join('');
 }
 $('mini').onclick=e=>{
   const ed=e.target.closest('[data-medit]'),dl=e.target.closest('[data-mdel]');
   if(!cur||cerrado())return;
   if(ed){pick(cur,+ed.dataset.medit);return}
   if(dl){const i=+dl.dataset.mdel,x=data[cur.r][i];
-    ask('¿Quitar este pesaje?',cur.n+' · '+fmt(x.neto)+' kg').then(ok=>{if(!ok)return;
+    ask('¿Quitar este pesaje?',cur.n+' · '+fe(x)).then(ok=>{if(!ok)return;
       data[cur.r].splice(i,1);if(!data[cur.r].length)delete data[cur.r];
       if(editing&&editing.i===i){const p=cur;save();reset();render();pick(p);return}
       if(editing&&editing.i>i)editing.i--;
       save();render();$('pc').textContent=pcText();drawMini()})}
 };
 function addEntry(){
-  const bruto=r2(parseFloat($('peso').value)),t=tara();
-  const ent={bruto,tara:t,neto:r2(bruto-t),det:{...cnt},t:Date.now()};
+  let ent;
+  if(isU(cur.r)){ent={und:parseInt($('cant').value),bruto:0,tara:0,neto:0,det:{},t:Date.now()}}
+  else{const bruto=r2(parseFloat($('peso').value)),t=tara();ent={bruto,tara:t,neto:r2(bruto-t),det:{...cnt},t:Date.now()}}
   let msg,p=cur;
   if(editing){const old=data[editing.r][editing.i];ent.t=old.t;ent.edit=Date.now();data[editing.r][editing.i]=ent;
-    msg=`✓ Pesaje de ${cur.n} corregido: ${fmt(old.neto)} → ${fmt(ent.neto)} kg (total ${fmt(tot(cur.r))} kg)`;openR=cur.r;
+    msg=`✓ Registro de ${cur.n} corregido: ${fe(old)} → ${fe(ent)} (total ${fQ(cur.r)})`;openR=cur.r;
     save();reset();render();pick(p)}   // vuelve al mismo corte para seguir agregando
   else{(data[cur.r]=data[cur.r]||[]).push(ent);
-    msg=`✓ Pesaje ${data[cur.r].length} de ${cur.n}: +${fmt(ent.neto)} kg · total del corte ${fmt(tot(cur.r))} kg`;
+    msg=`✓ Registro ${data[cur.r].length} de ${cur.n}: +${fe(ent)} · total ${fQ(cur.r)}`;
     save();render();
-    // el corte sigue abierto: limpia peso y canastillas para el siguiente pesaje
-    cnt={};$('peso').value='';$('pc').textContent=pcText();drawTipos();recalc();drawMini();$('peso').focus()}
+    // el corte sigue abierto: limpia los campos para el siguiente registro
+    cnt={};$('peso').value='';$('cant').value='';$('pc').textContent=pcText();drawTipos();recalc();drawMini();($('step2').classList.contains('u')?$('cant'):$('peso')).focus()}
   $('toast').textContent=msg;setTimeout(()=>{if($('toast').textContent===msg)$('toast').textContent=''},5000);
 }
-$('fin').onclick=()=>{const n=cur?cur.n:'';reset();$('q').focus();$('toast').textContent=n?'✓ Corte terminado: '+n:''}
 $('add').onclick=addEntry;
 $('canc').onclick=()=>{reset()};
 
@@ -510,10 +541,10 @@ let openR=null;
 function render(){
   drawBorC();
   const rows=registered();
-  $('grand').textContent=fmt(grand())+' kg'; $('cntp').textContent=rows.length+' producto'+(rows.length==1?'':'s');
+  $('grand').textContent=fTot(grand(),grandU()); $('cntp').textContent=rows.length+' producto'+(rows.length==1?'':'s');
   $('list').innerHTML=rows.length?rows.map(p=>{const e=data[p.r];
-    return `<div class="item ${openR==p.r?'open':''}" data-r="${p.r}"><div class="ih"><div class="nm"><b>${p.n}</b><small>${p.c} · ${e.length} pesaje${e.length==1?'':'s'}</small></div><div class="kg">${fmt(tot(p.r))} kg</div></div>
-      <div class="det">${e.map((x,i)=>`<div class="he"><div><b>${fmt(x.neto)} kg</b><small>${fmt(x.bruto)} bruto − ${fmt(x.tara)} tara (${describe(x)})${' · '+dm(x.t)}${x.edit?' · editado':''}</small></div><div class="bt"><button class="ed" data-edit="${i}">Editar</button><button data-del="${i}">Quitar</button></div></div>`).join('')}
+    return `<div class="item ${openR==p.r?'open':''}" data-r="${p.r}"><div class="ih"><div class="nm"><b>${p.n}</b><small>${p.c} · ${e.length} pesaje${e.length==1?'':'s'}</small></div><div class="kg">${fQ(p.r)}</div></div>
+      <div class="det">${e.map((x,i)=>`<div class="he"><div><b>${fe(x)}</b><small>${x.und!=null?'':fmt(x.bruto)+' bruto − '+fmt(x.tara)+' tara ('+describe(x)+')'}${x.und!=null?dm(x.t):' · '+dm(x.t)}${x.edit?' · editado':''}</small></div><div class="bt"><button class="ed" data-edit="${i}">Editar</button><button data-del="${i}">Quitar</button></div></div>`).join('')}
       <button class="add2" data-more="1">+ Agregar otro pesaje</button><button class="add2" data-delp="1" style="color:var(--red)">Borrar producto completo</button></div></div>`}).join('')
     :'<div class="empty">Aún no hay productos. Busca uno arriba para empezar.<br>Solo aparecen los que registres.</div>';
 }
@@ -522,11 +553,11 @@ $('list').onclick=e=>{
   if(cerrado()&&e.target.closest('[data-del],[data-edit],[data-more],[data-delp]'))return;
   const d=e.target.closest('[data-del]');
   if(d){const x=data[r][+d.dataset.del],p=PRODUCTS.find(p=>p.r==r);
-    ask('¿Quitar este pesaje?',p.n+' · '+fmt(x.neto)+' kg').then(ok=>{if(!ok)return;
+    ask('¿Quitar este pesaje?',p.n+' · '+fe(x)).then(ok=>{if(!ok)return;
       data[r].splice(+d.dataset.del,1);if(!data[r].length){delete data[r];openR=null}
       if(editing&&editing.r==r)reset();save();render()});return}
   if(e.target.closest('[data-delp]')){const p=PRODUCTS.find(p=>p.r==r);
-    ask('¿Borrar "'+p.n+'" del inventario?','Se eliminan sus '+data[r].length+' pesaje(s), '+fmt(tot(r))+' kg.').then(ok=>{if(!ok)return;
+    ask('¿Borrar "'+p.n+'" del inventario?','Se eliminan sus '+data[r].length+' pesaje(s), '+fQ(r)+'.').then(ok=>{if(!ok)return;
       delete data[r];openR=null;if(editing&&editing.r==r)reset();save();render()});return}
   const ed=e.target.closest('[data-edit]');
   if(ed){pick(PRODUCTS.find(p=>p.r==r),+ed.dataset.edit);window.scrollTo({top:0,behavior:'smooth'});return}
@@ -541,9 +572,9 @@ const canas=d=>{const por={};TIPOS.forEach(x=>por[x.id]=0);let pes=0,tara=0;
 $('sum').onclick=()=>{
   const rows=registered(),s=ses(),cn=canas(data);
   $('repinfo').innerHTML=s?`<b>${pvNombre(s.pid)}</b> · ${fmtF(s.fecha)}<br>Encargado: ${s.encargado} · ${s.cerrado?'cerrado '+dm(s.cerrado):'abierto (iniciado '+dm(s.creado)+')'}`:'';
-  $('tbl').innerHTML='<div class="tr h"><span>CÓD.</span><span>PRODUCTO</span><span>KG</span></div>'+
-    (rows.length?rows.map(p=>`<div class="tr"><span class="c">${p.c}</span><span>${p.n}</span><span class="k">${fmt(tot(p.r))}</span></div>`).join(''):'<div class="empty">Sin registros</div>');
-  $('gt2').textContent=fmt(grand())+' kg';
+  $('tbl').innerHTML='<div class="tr h"><span>CÓD.</span><span>PRODUCTO</span><span>CANT.</span></div>'+
+    (rows.length?rows.map(p=>`<div class="tr"><span class="c">${p.c}</span><span>${p.n}</span><span class="k">${fQ(p.r)}</span></div>`).join(''):'<div class="empty">Sin registros</div>');
+  $('gt2').textContent=fTot(grand(),grandU());
   $('tblc').innerHTML='<div class="tc h"><span>TIPO</span><span style="text-align:right">UND</span><span style="text-align:right">TARA KG</span></div>'+
     TIPOS.map(x=>`<div class="tc"><span>${x.n} <small style="color:var(--mut)">(${String(x.kg).replace('.',',')} kg)</small></span><span class="k">${cn.por[x.id]}</span><span class="k">${fmt(r2(cn.por[x.id]*x.kg))}</span></div>`).join('');
   $('gtc').textContent=cn.total+' und · '+fmt(cn.tara)+' kg';
@@ -554,16 +585,16 @@ $('close2').onclick=()=>$('ov').classList.remove('open');
 $('ov').onclick=e=>{if(e.target===$('ov'))$('close2').click()};
 $('cp').onclick=async()=>{
   const c=n=>String(n).replace('.',',');
-  const cn=canas(data);const s=registered().map(p=>p.c+'\t'+p.n+'\t'+c(tot(p.r))).join('\n')+'\nTOTAL\t\t'+c(grand())+'\n\nCANASTILLAS\n'+TIPOS.map(x=>x.n+'\t'+cn.por[x.id]).join('\n')+'\nTOTAL CANASTILLAS\t'+cn.total;
+  const cn=canas(data);const s=registered().map(p=>p.c+'\t'+p.n+'\t'+(isU(p.r)?und(p.r)+' und':c(tot(p.r)))).join('\n')+'\nTOTAL\t\t'+c(grand())+(grandU()?' kg + '+grandU()+' und':'')+'\n\nCANASTILLAS\n'+TIPOS.map(x=>x.n+'\t'+cn.por[x.id]).join('\n')+'\nTOTAL CANASTILLAS\t'+cn.total;
   try{await navigator.clipboard.writeText(s);$('cp').textContent='¡Copiado!'}catch(e){$('cp').textContent='No se pudo copiar'}
   setTimeout(()=>$('cp').textContent='Copiar resumen',1500)};
 $('rst').onclick=()=>ask('¿Borrar TODO el inventario?','Se eliminan todos los productos y pesajes registrados. No se puede deshacer.').then(ok=>{if(ok){data={};openR=null;reset();save();render()}});
 $('exp').onclick=()=>{
   const c=v=>'"'+(typeof v==='number'?String(v).replace('.',','):String(v).replace(/"/g,'""'))+'"';
-  const h=['COD','PRODUCTO','PESAJES','TOTAL NETO KG','TARA TOTAL KG','BRUTO TOTAL KG',...TIPOS.map(t=>t.n+' (und)')];
+  const h=['COD','PRODUCTO','PESAJES','TOTAL NETO KG','UNIDADES','TARA TOTAL KG','BRUTO TOTAL KG',...TIPOS.map(t=>t.n+' (und)')];
   const L=[h].concat(registered().map(p=>{const e=data[p.r];
-    return [p.c,p.n,e.length,tot(p.r),r2(e.reduce((s,x)=>s+x.tara,0)),r2(e.reduce((s,x)=>s+x.bruto,0)),...TIPOS.map(t=>e.reduce((s,x)=>s+(x.det[t.id]||0),0))]}));
-  L.push(['','TOTAL','',grand()]);
+    return [p.c,p.n,e.length,tot(p.r),isU(p.r)?und(p.r):'',r2(e.reduce((s,x)=>s+x.tara,0)),r2(e.reduce((s,x)=>s+x.bruto,0)),...TIPOS.map(t=>e.reduce((s,x)=>s+(x.det[t.id]||0),0))]}));
+  L.push(['','TOTAL','',grand(),grandU()]);
   const cn=canas(data);L.push([]);L.push(['CANASTILLAS','UNIDADES','TARA KG']);TIPOS.forEach(x=>L.push([x.n,cn.por[x.id],r2(cn.por[x.id]*x.kg)]));L.push(['TOTAL CANASTILLAS',cn.total,cn.tara]);
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+L.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv'}));
   a.download='inventario_'+slug(pvNombre(pvId))+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
@@ -644,7 +675,7 @@ function go(v){view=v;
   $('toolsC').style.display=v==='c'?'':'none';$('grand').style.display=v==='c'?'':'none';
   $('ttl').textContent=TITLES[v];
   document.querySelectorAll('.nv').forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-  if(v==='i')renderI();if(v==='a')renderA();if(v==='r')renderR();if(v==='g')renderG();
+  if(v==='i')renderI();if(v==='a')renderA();if(v==='r')renderR();if(v==='g'){renderG();renderU()}
   openSide(false);window.scrollTo(0,0)}
 document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>go(b.dataset.v));
 
@@ -715,15 +746,15 @@ function renderA(){
   const F=sel.value,S=sesiones.filter(s=>s.fecha===F).map(snapS).sort((a,b)=>pvNombre(a.s.pid).localeCompare(pvNombre(b.s.pid)));
   const sinInv=activos().filter(p=>!S.some(x=>x.s.pid===p.id));
   $('pcards').innerHTML=S.map(x=>{const kg=sumNeto(x.c),np=Object.keys(x.c).length,ni=Object.keys(x.i).length;
-    return `<div class="pcard ${x.s.id===sesId?'cur':''}" data-id="${x.s.id}"><div class="nm"><b>${pvNombre(x.s.pid)}</b><small>${x.s.encargado} · ${dm(x.s.creado)} · ${x.s.cerrado?'cerrado '+dm(x.s.cerrado):'abierto'}<br>${np} cortes · ${ni} insumos</small></div><div class="kg">${kg?fmt(kg)+' kg':'—'}</div></div>`}).join('')
+    return `<div class="pcard ${x.s.id===sesId?'cur':''}" data-id="${x.s.id}"><div class="nm"><b>${pvNombre(x.s.pid)}</b><small>${x.s.encargado} · ${dm(x.s.creado)} · ${x.s.cerrado?'cerrado '+dm(x.s.cerrado):'abierto'}<br>${np} cortes · ${ni} insumos</small></div><div class="kg">${fTot(kg,sumUnd(x.c))==='0,00 kg'?'—':fTot(kg,sumUnd(x.c))}</div></div>`}).join('')
     +sinInv.map(p=>`<div class="pcard" style="opacity:.55;cursor:default"><div class="nm"><b>${p.nombre}</b><small>Sin inventario ese día</small></div></div>`).join('')
     ||'<div class="empty">Aún no hay inventarios. Inicia uno desde el menú.</div>';
   const q=norm($('qa').value.trim());
-  const rows=PRODUCTS.map(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return {p,per,t,n:per.filter(v=>v>0).length}})
+  const rows=PRODUCTS.map(p=>{const per=S.map(x=>qv(p.r,x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return {p,per,t,n:per.filter(v=>v>0).length}})
     .filter(r=>r.t>0&&(!q||(r.p.c+' '+norm(r.p.n)).includes(q)));
-  $('atot').textContent=fmt(r2(rows.reduce((a,r)=>a+r.t,0)))+' kg';
-  $('tbla').innerHTML='<div class="tr h" style="grid-template-columns:62px 1fr auto"><span>CÓD.</span><span>CORTE</span><span>KG TOTAL</span></div>'+
-    (rows.length?rows.map(r=>`<div class="tr" style="grid-template-columns:62px 1fr auto"><span class="c">${r.p.c}</span><span>${r.p.n}<br><small style="color:var(--mut)">${r.n} punto${r.n==1?'':'s'}: ${S.map((x,i)=>r.per[i]>0?pvNombre(x.s.pid)+' '+fmt(r.per[i]):'').filter(Boolean).join(' · ')}</small></span><span class="k">${fmt(r.t)}</span></div>`).join(''):'<div class="empty">Aún no hay pesajes ese día.</div>');
+  $('atot').textContent=fTot(r2(rows.filter(r=>!isU(r.p.r)).reduce((a,r)=>a+r.t,0)),rows.filter(r=>isU(r.p.r)).reduce((a,r)=>a+r.t,0));
+  $('tbla').innerHTML='<div class="tr h" style="grid-template-columns:62px 1fr auto"><span>CÓD.</span><span>CORTE</span><span>TOTAL</span></div>'+
+    (rows.length?rows.map(r=>`<div class="tr" style="grid-template-columns:62px 1fr auto"><span class="c">${r.p.c}</span><span>${r.p.n}<br><small style="color:var(--mut)">${r.n} punto${r.n==1?'':'s'}: ${S.map((x,i)=>r.per[i]>0?pvNombre(x.s.pid)+' '+fv(r.p.r,r.per[i]):'').filter(Boolean).join(' · ')}</small></span><span class="k">${fv(r.p.r,r.t)}</span></div>`).join(''):'<div class="empty">Aún no hay pesajes ese día.</div>');
   const CC=S.map(x=>({s:x.s,c:canas(x.c)})),W='grid-template-columns:1fr '+TIPOS.map(()=>'52px').join(' ')+' 54px';
   const tc=CC.reduce((a,x)=>a+x.c.total,0);
   $('tblc2').innerHTML=`<div class="tr h" style="${W};min-width:420px"><span>PUNTO</span>${TIPOS.map(x=>`<span title="${x.n}">${x.n.replace('Canastilla ','').replace('Base de embutidos','B. emb.')}</span>`).join('')}<span>TOTAL</span></div>`+
@@ -739,9 +770,9 @@ function csvDown(L,name){const c=v=>'"'+(typeof v==='number'?String(v).replace('
   a.download=name+'.csv';a.click()}
 const Sf=()=>{const F=$('afec').value;return {F,S:sesiones.filter(s=>s.fecha===F).map(snapS)}};
 $('expa').onclick=()=>{const {F,S}=Sf();
-  const L=[['COD','PRODUCTO',...S.map(x=>pvNombre(x.s.pid)),'TOTAL KG']];
-  PRODUCTS.forEach(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));if(t>0)L.push([p.c,p.n,...per,t])});
-  L.push(['','TOTAL',...S.map(x=>sumNeto(x.c)),r2(S.reduce((a,x)=>a+sumNeto(x.c),0))]);
+  const L=[['COD','PRODUCTO','UNIDAD',...S.map(x=>pvNombre(x.s.pid)),'TOTAL']];
+  PRODUCTS.forEach(p=>{const per=S.map(x=>qv(p.r,x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));if(t>0)L.push([p.c,p.n,isU(p.r)?'und':'kg',...per,t])});
+  L.push(['','TOTAL KG','',...S.map(x=>sumNeto(x.c)),r2(S.reduce((a,x)=>a+sumNeto(x.c),0))]);L.push(['','TOTAL UND','',...S.map(x=>sumUnd(x.c)),S.reduce((a,x)=>a+sumUnd(x.c),0)]);
   L.push([]);L.push(['CANASTILLAS',...TIPOS.map(x=>x.n),'TOTAL']);S.forEach(x=>{const k=canas(x.c);L.push([pvNombre(x.s.pid),...TIPOS.map(y=>k.por[y.id]),k.total])});
   L.push([]);L.push(['FECHA INVENTARIO',F]);S.forEach(x=>L.push([pvNombre(x.s.pid),'Encargado: '+x.s.encargado,'Inicio: '+dm(x.s.creado),x.s.cerrado?'Cierre: '+dm(x.s.cerrado):'Abierto']));
   csvDown(L,'inventario_todos_los_puntos_'+F)};
@@ -751,6 +782,14 @@ $('expai').onclick=()=>{const {F,S}=Sf();
   csvDown(L,'insumos_todos_los_puntos_'+F)};
 
 /* ---- configuración de puntos de venta ---- */
+const tieneReg=r=>sesiones.some(s=>{const c=rd(LK+':'+s.id,{});return c[r]&&c[r].length});
+function renderU(){const q=norm($('qu').value.trim());
+  const L=(q?PRODUCTS.filter(p=>(p.c+' '+norm(p.n)).includes(q)):PRODUCTS.filter(p=>isU(p.r))).slice(0,60);
+  $('ulist').innerHTML=L.length?L.map(p=>`<label class="npt"><input type="checkbox" data-r="${p.r}" ${isU(p.r)?'checked':''}><span>${p.c} · ${p.n}</span><small>${isU(p.r)?'por unidad':'kg'}</small></label>`).join(''):'<div class="empty">Sin resultados</div>'}
+$('qu').oninput=renderU;
+$('ulist').onchange=e=>{const c=e.target.closest('input[data-r]');if(!c)return;const r=+c.dataset.r;
+  if(tieneReg(r)){c.checked=!c.checked;const p=PRODUCTS.find(x=>x.r===r);ask('No se puede cambiar',p.n+' ya tiene registros en algún inventario. Quítalos antes de cambiar si se cuenta por kg o por unidad.',{ok:'Entendido',single:true});return}
+  if(c.checked)UND.add(r);else UND.delete(r);wr(UNDK,[...UND]);renderU()};
 function renderG(){
   $('pvlist').innerHTML=puntos.map((p,i)=>`<div class="pvrow ${p.activo===false?'off':''}" data-i="${i}"><input type="text" data-f="nombre" value="${(p.nombre||'').replace(/"/g,'&quot;')}"><input type="text" data-f="ciudad" value="${(p.ciudad||'').replace(/"/g,'&quot;')}" placeholder="Ciudad"><label><input type="checkbox" data-f="activo" ${p.activo===false?'':'checked'}>Activo</label></div>`).join('')}
 $('pvlist').onchange=e=>{const row=e.target.closest('.pvrow');if(!row)return;const p=puntos[+row.dataset.i],f=e.target.dataset.f;
@@ -795,8 +834,8 @@ function newDoc(titulo,sub){
 const vacio=(n)=>[[{content:'Sin registros',colSpan:n,styles:{halign:'center',textColor:[120,120,120]}}]];
 const R=n=>({halign:'right'});
 function datosPunto(s){const x=snapS(s),c=x.c,i=x.i;
-  const cortes=PRODUCTS.filter(p=>c[p.r]&&c[p.r].length).map(p=>{const e=c[p.r];return {p,n:e.length,b:r2(e.reduce((a,w)=>a+w.bruto,0)),t:r2(e.reduce((a,w)=>a+w.tara,0)),k:tt(e)}});
-  return {s,c,i,cortes,kg:sumNeto(c),cn:canas(c),ins:INSUMOS.filter(p=>i[p.id]).map(p=>({p,n:i[p.id].n,u:i[p.id].u}))}}
+  const cortes=PRODUCTS.filter(p=>c[p.r]&&c[p.r].length).map(p=>{const e=c[p.r];return {p,n:e.length,b:r2(e.reduce((a,w)=>a+w.bruto,0)),t:r2(e.reduce((a,w)=>a+w.tara,0)),k:tt(e),u:isU(p.r)?uOf(e):null}});
+  return {s,c,i,cortes,kg:sumNeto(c),und:sumUnd(c),cn:canas(c),ins:INSUMOS.filter(p=>i[p.id]).map(p=>({p,n:i[p.id].n,u:i[p.id].u}))}}
 function secCanastillas(ctx,cn){
   ctx.sec('Canastillas en el punto',{head:[['Tipo','Peso c/u (kg)','Unidades','Tara (kg)']],
     body:TIPOS.map(x=>[x.n,fmt(x.kg),cn.por[x.id],fmt(r2(cn.por[x.id]*x.kg))]),foot:[['TOTAL','',cn.total,fmt(cn.tara)]],columnStyles:{1:R(),2:R(),3:R()}})}
@@ -807,10 +846,10 @@ async function pdfPunto(s,inc,btn){
   try{await loadPdf();
     const d=datosPunto(s),ctx=newDoc('Inventario físico · '+pvNombre(s.pid),'Fecha del inventario: '+fmtF(s.fecha));
     ctx.meta([['Punto de venta',pvNombre(s.pid)],['Fecha del inventario',fmtF(s.fecha)],['Encargado',s.encargado],['Inicio',dm(s.creado)],['Estado',s.cerrado?'Cerrado '+dm(s.cerrado):'Abierto'],
-      ['Total cárnico',fmt(d.kg)+' kg en '+d.cortes.length+' cortes'],['Canastillas',d.cn.total+' unidades (tara '+fmt(d.cn.tara)+' kg)'],['Insumos',d.ins.length+(d.ins.length==1?' referencia contada':' referencias contadas')]]);
-    if(inc.c)ctx.sec('Cárnico · kg netos por corte',{head:[['Cód.','Corte','Pesajes','Bruto (kg)','Tara (kg)','Neto (kg)']],
-      body:d.cortes.length?d.cortes.map(r=>[r.p.c,r.p.n,r.n,fmt(r.b),fmt(r.t),fmt(r.k)]):vacio(6),
-      foot:[['','TOTAL',d.cortes.reduce((a,r)=>a+r.n,0),fmt(r2(d.cortes.reduce((a,r)=>a+r.b,0))),fmt(r2(d.cortes.reduce((a,r)=>a+r.t,0))),fmt(d.kg)]],columnStyles:{2:R(),3:R(),4:R(),5:R()}});
+      ['Total cárnico',fTot(d.kg,d.und)+' en '+d.cortes.length+' cortes'],['Canastillas',d.cn.total+' unidades (tara '+fmt(d.cn.tara)+' kg)'],['Insumos',d.ins.length+(d.ins.length==1?' referencia contada':' referencias contadas')]]);
+    if(inc.c)ctx.sec('Cárnico · kg netos por corte',{head:[['Cód.','Corte','Registros','Bruto (kg)','Tara (kg)','Cantidad']],
+      body:d.cortes.length?d.cortes.map(r=>r.u!=null?[r.p.c,r.p.n,r.n,'-','-',r.u+' und']:[r.p.c,r.p.n,r.n,fmt(r.b),fmt(r.t),fmt(r.k)+' kg']):vacio(6),
+      foot:[['','TOTAL',d.cortes.reduce((a,r)=>a+r.n,0),fmt(r2(d.cortes.reduce((a,r)=>a+r.b,0))),fmt(r2(d.cortes.reduce((a,r)=>a+r.t,0))),fTot(d.kg,d.und)]],columnStyles:{2:R(),3:R(),4:R(),5:R()}});
     if(inc.k)secCanastillas(ctx,d.cn);
     if(inc.i)secInsumos(ctx,d.ins);
     ctx.firmas('Encargado: '+s.encargado);
@@ -823,11 +862,11 @@ async function pdfConsolidado(F,inc,btn){
     const S=sesiones.filter(s=>s.fecha===F).map(datosPunto).sort((a,b)=>pvNombre(a.s.pid).localeCompare(pvNombre(b.s.pid)));
     const ctx=newDoc('Inventario físico · Consolidado','Fecha del inventario: '+fmtF(F)+' · '+S.length+' punto'+(S.length==1?'':'s'));
     const totKg=r2(S.reduce((a,x)=>a+x.kg,0)),totC=S.reduce((a,x)=>a+x.cn.total,0);
-    ctx.sec('Puntos de venta',{head:[['Punto','Encargado','Estado','Cárnico (kg)','Canastillas']],
-      body:S.length?S.map(x=>[pvNombre(x.s.pid),x.s.encargado,x.s.cerrado?'Cerrado':'Abierto',fmt(x.kg),x.cn.total]):vacio(5),
-      foot:[['TOTAL','','',fmt(totKg),totC]],columnStyles:{3:R(),4:R()}});
-    if(inc.c){const rows=PRODUCTS.map(p=>{const per=S.map(x=>tt(x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return [p.c,p.n,per.filter(v=>v>0).length,fmt(t),t]}).filter(r=>r[4]>0);
-      ctx.sec('Cárnico · kg totales por corte (todos los puntos)',{head:[['Cód.','Corte','Puntos','Kg total']],body:rows.length?rows.map(r=>r.slice(0,4)):vacio(4),foot:[['','TOTAL','',fmt(totKg)]],columnStyles:{2:R(),3:R()}})}
+    ctx.sec('Puntos de venta',{head:[['Punto','Encargado','Estado','Cárnico','Canastillas']],
+      body:S.length?S.map(x=>[pvNombre(x.s.pid),x.s.encargado,x.s.cerrado?'Cerrado':'Abierto',fTot(x.kg,x.und),x.cn.total]):vacio(5),
+      foot:[['TOTAL','','',fTot(totKg,S.reduce((a,x)=>a+x.und,0)),totC]],columnStyles:{3:R(),4:R()}});
+    if(inc.c){const rows=PRODUCTS.map(p=>{const per=S.map(x=>qv(p.r,x.c[p.r])),t=r2(per.reduce((a,b)=>a+b,0));return [p.c,p.n,per.filter(v=>v>0).length,fv(p.r,t),t]}).filter(r=>r[4]>0);
+      ctx.sec('Cárnico · totales por corte (todos los puntos)',{head:[['Cód.','Corte','Puntos','Total']],body:rows.length?rows.map(r=>r.slice(0,4)):vacio(4),foot:[['','TOTAL','',fTot(totKg,S.reduce((a,x)=>a+x.und,0))]],columnStyles:{2:R(),3:R()}})}
     if(inc.k){const g=TIPOS.map(x=>S.reduce((a,y)=>a+y.cn.por[x.id],0));
       ctx.sec('Canastillas por punto',{head:[['Punto',...TIPOS.map(x=>x.n.replace('Canastilla ','').replace('Base de embutidos','B. embutidos')),'Total']],
         body:S.length?S.map(x=>[pvNombre(x.s.pid),...TIPOS.map(k=>x.cn.por[k.id]),x.cn.total]):vacio(TIPOS.length+2),foot:[['TOTAL',...g,totC]],
@@ -849,9 +888,9 @@ function renderR(){
   const a=$('rtipo').value==='a';$('rp').style.display=a?'none':'';$('ra').style.display=a?'':'none';
   let txt='',ok=false;
   if(a&&$('rfec').value){const X=sesiones.filter(s=>s.fecha===$('rfec').value).map(datosPunto);ok=X.length>0;
-    txt=`<b>${fmtF($('rfec').value)}</b><br>${X.length} punto${X.length==1?'':'s'} · ${fmt(r2(X.reduce((q,x)=>q+x.kg,0)))} kg cárnico · ${X.reduce((q,x)=>q+x.cn.total,0)} canastillas · ${X.reduce((q,x)=>q+x.ins.length,0)} conteos de insumos`}
+    txt=`<b>${fmtF($('rfec').value)}</b><br>${X.length} punto${X.length==1?'':'s'} · ${fTot(r2(X.reduce((q,x)=>q+x.kg,0)),X.reduce((q,x)=>q+x.und,0))} cárnico · ${X.reduce((q,x)=>q+x.cn.total,0)} canastillas · ${X.reduce((q,x)=>q+x.ins.length,0)} conteos de insumos`}
   else if(!a&&$('rses').value){const s=sesiones.find(x=>x.id===$('rses').value);if(s){const d=datosPunto(s);ok=true;
-    txt=`<b>${pvNombre(s.pid)} · ${fmtF(s.fecha)}</b><br>Encargado: ${s.encargado} · ${s.cerrado?'cerrado':'abierto'}<br>${d.cortes.length} cortes · ${fmt(d.kg)} kg · ${d.cn.total} canastillas · ${d.ins.length} insumos`}}
+    txt=`<b>${pvNombre(s.pid)} · ${fmtF(s.fecha)}</b><br>Encargado: ${s.encargado} · ${s.cerrado?'cerrado':'abierto'}<br>${d.cortes.length} cortes · ${fTot(d.kg,d.und)} · ${d.cn.total} canastillas · ${d.ins.length} insumos`}}
   $('rprev').innerHTML=txt||'Aún no hay inventarios para reportar.';
   $('rgen').disabled=!ok||!($('rc').checked||$('rk').checked||$('ri').checked)}
 ['rtipo','rses','rfec','rc','rk','ri'].forEach(id=>$(id).onchange=renderR);
